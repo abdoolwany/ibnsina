@@ -1,0 +1,126 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { createClient } from "@/lib/supabase/client"
+import type { Vaccinator } from "@/types/database"
+
+interface Props {
+  vaccinators: Vaccinator[]
+  hospitalId: string
+  userId: string
+}
+
+export default function VaccinatorManager({ vaccinators, hospitalId, userId }: Props) {
+  const [name, setName] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault()
+    if (!name.trim()) return
+
+    setError("")
+    setLoading(true)
+
+    const { error: insertError } = await supabase
+      .from('vaccinators')
+      .insert({
+        hospital_id: hospitalId,
+        full_name: name.trim(),
+        added_by: userId,
+        is_active: true,
+      } as never)
+
+    if (insertError) {
+      setError(insertError.message)
+    } else {
+      setName("")
+      router.refresh()
+    }
+
+    setLoading(false)
+  }
+
+  async function handleToggle(id: string, currentActive: boolean) {
+    const { error: updateError } = await supabase
+      .from('vaccinators')
+      .update({ is_active: !currentActive } as never)
+      .eq('id', id)
+
+    if (updateError) {
+      setError(updateError.message)
+    } else {
+      router.refresh()
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleAdd} className="bg-white rounded-lg shadow p-4 flex gap-3">
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="اسم القائم بالتطعيم..."
+          required
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+        >
+          {loading ? "..." : "إضافة"}
+        </button>
+      </form>
+
+      {error && (
+        <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>
+      )}
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b text-right">
+              <th className="py-3 px-4 font-semibold">الاسم</th>
+              <th className="py-3 px-4 font-semibold">الحالة</th>
+              <th className="py-3 px-4 font-semibold"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {vaccinators.length === 0 ? (
+              <tr>
+                <td colSpan={3} className="py-8 text-center text-gray-500">
+                  لا يوجد قائمون بالتطعيم بعد
+                </td>
+              </tr>
+            ) : (
+              vaccinators.map(v => (
+                <tr key={v.id} className="border-b hover:bg-gray-50">
+                  <td className="py-3 px-4">{v.full_name}</td>
+                  <td className="py-3 px-4">
+                    {v.is_active
+                      ? <span className="text-green-600">نشط</span>
+                      : <span className="text-red-600">موقوف</span>
+                    }
+                  </td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => handleToggle(v.id, v.is_active)}
+                      className={`text-sm px-3 py-1 rounded ${v.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
+                    >
+                      {v.is_active ? 'إيقاف' : 'تفعيل'}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
