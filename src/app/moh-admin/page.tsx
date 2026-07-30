@@ -57,7 +57,25 @@ export default async function MohAdminPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        {/* روابط الإدارة */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="/moh-admin/users" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-lg">إدارة المستخدمين</h3>
+            <p className="text-sm text-gray-500">إنشاء حسابات، تحديد الأدوار، ربط المستشفيات</p>
+          </div>
+          <span className="text-2xl">👥</span>
+        </a>
+        <a href="/moh-admin/hospitals" className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-lg">إدارة المستشفيات</h3>
+            <p className="text-sm text-gray-500">إضافة أو إزالة مستشفيات من النظام</p>
+          </div>
+          <span className="text-2xl">🏥</span>
+        </a>
+      </div>
+
+      <div className="bg-white rounded-lg shadow overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b text-right">

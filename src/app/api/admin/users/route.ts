@@ -1,0 +1,99 @@
+import { NextResponse } from 'next/server'
+import { createServerSupabase, createServiceRoleClient } from '@/lib/supabase/server'
+import type { UserRole } from '@/types/database'
+
+export async function GET() {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+
+  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
+  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+
+  const admin = await createServiceRoleClient()
+  const { data: users } = await admin.from('user_profiles').select('*, user_hospital_links(hospital_id)')
+
+  return NextResponse.json({ users })
+}
+
+export async function POST(request: Request) {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+
+  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
+  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+
+  const { email, password, fullName, role, hospitalIds } = await request.json()
+
+  if (!email || !password || !fullName || !role) {
+    return NextResponse.json({ error: 'جميع الحقول مطلوبة' }, { status: 400 })
+  }
+
+  const validRoles: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1', 'moh_admin']
+  if (!validRoles.includes(role)) {
+    return NextResponse.json({ error: 'دور غير صحيح' }, { status: 400 })
+  }
+
+  const admin = await createServiceRoleClient()
+
+  const { data: authData, error: authError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+  })
+
+  if (authError) {
+    return NextResponse.json({ error: authError.message }, { status: 500 })
+  }
+
+  const { error: profileError } = await admin.from('user_profiles').insert({
+    id: authData.user.id,
+    role,
+    full_name: fullName,
+  })
+
+  if (profileError) {
+    return NextResponse.json({ error: profileError.message }, { status: 500 })
+  }
+
+  if (hospitalIds && hospitalIds.length > 0) {
+    const { error: linkError } = await admin.from('user_hospital_links').insert(
+      hospitalIds.map((hid: string) => ({ user_id: authData.user.id, hospital_id: hid }))
+    )
+    if (linkError) {
+      return NextResponse.json({ error: linkError.message }, { status: 500 })
+    }
+  }
+
+  return NextResponse.json({ success: true, userId: authData.user.id })
+}
+
+export async function PUT(request: Request) {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+
+  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
+  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+
+  const { userId, role, fullName, hospitalIds } = await request.json()
+  const admin = await createServiceRoleClient()
+
+  if (role) {
+    await admin.from('user_profiles').update({ role } as never).eq('id', userId)
+  }
+  if (fullName) {
+    await admin.from('user_profiles').update({ full_name: fullName } as never).eq('id', userId)
+  }
+  if (hospitalIds !== undefined) {
+    await admin.from('user_hospital_links').delete().eq('user_id', userId)
+    if (hospitalIds.length > 0) {
+      await admin.from('user_hospital_links').insert(
+        hospitalIds.map((hid: string) => ({ user_id: userId, hospital_id: hid }))
+      )
+    }
+  }
+
+  return NextResponse.json({ success: true })
+}
