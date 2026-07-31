@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSystemPgClient } from '@/lib/db/pool'
 
 // POST /api/system/delete-records
 // حذف فعلي نهائي لبيانات الإدخال حسب نطاق زمني (created_at)
 // body: { type: 'children' | 'batches', dateFrom, dateTo, preview? }
-// مع تسجيل كل سجل محذوف في audit_log واستعادة المساحة بـ VACUUM FULL
+// الحذف والتسجيل في audit_log عبر service role (لا يحتاج DATABASE_URL)
+// أما استعادة المساحة VACUUM FULL فتتم عبر DATABASE_URL إن وُجدت
 export async function POST(request: Request) {
   const user = await getCurrentUser()
   if (!user || user.role !== 'system_operator') {
@@ -24,10 +26,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'تاريخ البداية بعد تاريخ النهاية' }, { status: 400 })
   }
 
-  const client = await getSystemPgClient()
-  if (!client) {
-    return NextResponse.json({ error: 'DATABASE_URL غير مضبوطة في متغيرات البيئة' }, { status: 500 })
-  }
+  const admin = await createServiceRoleClient()
 
   // نطاق زمني UTC يشمل اليوم الأخير كاملًا
   const fromTS = `${dateFrom}T00:00:00Z`
@@ -35,97 +34,131 @@ export async function POST(request: Request) {
   toEnd.setDate(toEnd.getDate() + 1)
   const toEndTS = toEnd.toISOString()
 
-  try {
-    if (type === 'children') {
-      if (preview) {
-        const r = await client.query(
-          'SELECT count(*)::int AS c FROM child_vaccination_records WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz',
-          [fromTS, toEndTS]
-        )
-        return NextResponse.json({ preview: true, children: r.rows[0].c })
-      }
-
-      const deleted = await client.query(
-        `
-        WITH deleted AS (
-          DELETE FROM child_vaccination_records
-          WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
-          RETURNING id, to_jsonb(child_vaccination_records) AS old_value
-        )
-        INSERT INTO audit_log (table_name, record_id, action, performed_by, old_value)
-        SELECT 'child_vaccination_records', id, 'delete_attempt', $3, old_value FROM deleted
-        RETURNING 1
-        `,
-        [fromTS, toEndTS, user.id]
-      )
-
-      const vacuum = await runVacuum(client, ['child_vaccination_records'])
-      return NextResponse.json({
-        deleted: deleted.rowCount ?? 0,
-        spaceReclaimed: vacuum.ok,
-        vacuumError: vacuum.error,
-      })
-    }
-
-    // حذف الدفعات: حذف سجلات الأطفال المرتبطة أولًا ثم الدفعات نفسها
+  if (type === 'children') {
     if (preview) {
-      const r = await client.query(
-        `
-        SELECT
-          (SELECT count(*)::int FROM vaccine_batches
-            WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz) AS batches,
-          (SELECT count(*)::int FROM child_vaccination_records
-            WHERE batch_id IN (
-              SELECT id FROM vaccine_batches
-              WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
-            )) AS children
-        `,
-        [fromTS, toEndTS]
-      )
-      return NextResponse.json({ preview: true, batches: r.rows[0].batches, children: r.rows[0].children })
+      const { count, error } = await admin
+        .from('child_vaccination_records')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', fromTS)
+        .lt('created_at', toEndTS)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ preview: true, children: count ?? 0 })
     }
 
-    const childRows = await client.query(
-      `
-      WITH deleted AS (
-        DELETE FROM child_vaccination_records
-        WHERE batch_id IN (
-          SELECT id FROM vaccine_batches
-          WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
-        )
-        RETURNING id, to_jsonb(child_vaccination_records) AS old_value
-      )
-      INSERT INTO audit_log (table_name, record_id, action, performed_by, old_value)
-      SELECT 'child_vaccination_records', id, 'delete_attempt', $3, old_value FROM deleted
-      RETURNING 1
-      `,
-      [fromTS, toEndTS, user.id]
-    )
+    const { data: rows, error: selErr } = await admin
+      .from('child_vaccination_records')
+      .select('*')
+      .gte('created_at', fromTS)
+      .lt('created_at', toEndTS)
+    if (selErr) return NextResponse.json({ error: selErr.message }, { status: 500 })
+    if (!rows || rows.length === 0) {
+      return NextResponse.json({ deleted: 0, spaceReclaimed: true, vacuumError: null })
+    }
 
-    const batchRows = await client.query(
-      `
-      WITH deleted AS (
-        DELETE FROM vaccine_batches
-        WHERE created_at >= $1::timestamptz AND created_at < $2::timestamptz
-        RETURNING id, to_jsonb(vaccine_batches) AS old_value
-      )
-      INSERT INTO audit_log (table_name, record_id, action, performed_by, old_value)
-      SELECT 'vaccine_batches', id, 'delete_attempt', $3, old_value FROM deleted
-      RETURNING 1
-      `,
-      [fromTS, toEndTS, user.id]
-    )
+    const ids = rows.map((r) => r.id)
+    const { error: delErr } = await admin
+      .from('child_vaccination_records')
+      .delete()
+      .in('id', ids)
+    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
 
-    const vacuum = await runVacuum(client, ['child_vaccination_records', 'vaccine_batches'])
+    await writeAuditEntries(admin, 'child_vaccination_records', rows, user.id)
+
+    const vacuum = await runVacuum(['child_vaccination_records'])
     return NextResponse.json({
-      deleted_children: childRows.rowCount ?? 0,
-      deleted_batches: batchRows.rowCount ?? 0,
+      deleted: rows.length,
       spaceReclaimed: vacuum.ok,
       vacuumError: vacuum.error,
     })
-  } finally {
-    await client.end()
   }
+
+  // حذف الدفعات: حذف سجلات الأطفال المرتبطة أولًا ثم الدفعات نفسها
+  const { data: batchRows, error: batchSelErr } = await admin
+    .from('vaccine_batches')
+    .select('id')
+    .gte('created_at', fromTS)
+    .lt('created_at', toEndTS)
+  if (batchSelErr) return NextResponse.json({ error: batchSelErr.message }, { status: 500 })
+
+  if (preview) {
+    const batchIds = (batchRows ?? []).map((b) => b.id)
+    let childrenCount = 0
+    if (batchIds.length > 0) {
+      const { count, error } = await admin
+        .from('child_vaccination_records')
+        .select('id', { count: 'exact', head: true })
+        .in('batch_id', batchIds)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      childrenCount = count ?? 0
+    }
+    return NextResponse.json({
+      preview: true,
+      batches: (batchRows ?? []).length,
+      children: childrenCount,
+    })
+  }
+
+  const batchIds = (batchRows ?? []).map((b) => b.id)
+  let deletedChildren = 0
+  if (batchIds.length > 0) {
+    const { data: childRows, error: childSelErr } = await admin
+      .from('child_vaccination_records')
+      .select('*')
+      .in('batch_id', batchIds)
+    if (childSelErr) return NextResponse.json({ error: childSelErr.message }, { status: 500 })
+    if (childRows && childRows.length > 0) {
+      const childIds = childRows.map((r) => r.id)
+      const { error: childDelErr } = await admin
+        .from('child_vaccination_records')
+        .delete()
+        .in('id', childIds)
+      if (childDelErr) return NextResponse.json({ error: childDelErr.message }, { status: 500 })
+      await writeAuditEntries(admin, 'child_vaccination_records', childRows, user.id)
+      deletedChildren = childRows.length
+    }
+  }
+
+  // جلب كامل سجلات الدفعات المطلوب حذفها للتسجيل في audit_log
+  const { data: fullBatchRows, error: fullBatchErr } = await admin
+    .from('vaccine_batches')
+    .select('*')
+    .in('id', batchIds.length > 0 ? batchIds : ['00000000-0000-0000-0000-000000000000'])
+  if (fullBatchErr) return NextResponse.json({ error: fullBatchErr.message }, { status: 500 })
+
+  let deletedBatches = 0
+  if (batchIds.length > 0) {
+    const { error: batchDelErr } = await admin
+      .from('vaccine_batches')
+      .delete()
+      .in('id', batchIds)
+    if (batchDelErr) return NextResponse.json({ error: batchDelErr.message }, { status: 500 })
+    deletedBatches = batchIds.length
+  }
+
+  if (fullBatchRows && fullBatchRows.length > 0) {
+    await writeAuditEntries(admin, 'vaccine_batches', fullBatchRows, user.id)
+  }
+
+  const vacuum = await runVacuum(['child_vaccination_records', 'vaccine_batches'])
+  return NextResponse.json({
+    deleted_children: deletedChildren,
+    deleted_batches: deletedBatches,
+    spaceReclaimed: vacuum.ok,
+    vacuumError: vacuum.error,
+  })
+}
+
+// تسجيل عمليات الحذف في audit_log عبر service role (تتجاوز RLS)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function writeAuditEntries(admin: any, tableName: string, rows: any[], performedBy: string) {
+  const entries = rows.map((r) => ({
+    table_name: tableName,
+    record_id: r.id,
+    action: 'delete_attempt',
+    performed_by: performedBy,
+    old_value: r,
+  }))
+  await admin.from('audit_log').insert(entries)
 }
 
 interface VacuumResult {
@@ -133,8 +166,15 @@ interface VacuumResult {
   error: string | null
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function runVacuum(client: any, tables: string[]): Promise<VacuumResult> {
+// استعادة المساحة اختيارية: تعمل فقط إن وُجد DATABASE_URL
+async function runVacuum(tables: string[]): Promise<VacuumResult> {
+  const client = await getSystemPgClient()
+  if (!client) {
+    return {
+      ok: false,
+      error: 'DATABASE_URL غير مضبوطة — الحذف تم لكن استعادة المساحة ستُؤجل (أو تُنفّذ من Supabase يدويًا)',
+    }
+  }
   try {
     for (const t of tables) {
       await client.query(`VACUUM FULL public.${t}`)
@@ -142,5 +182,7 @@ async function runVacuum(client: any, tables: string[]): Promise<VacuumResult> {
     return { ok: true, error: null }
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : 'فشل VACUUM' }
+  } finally {
+    await client.end()
   }
 }

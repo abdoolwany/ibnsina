@@ -1,90 +1,101 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
+import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSystemPgClient } from '@/lib/db/pool'
 
 // GET /api/system/auto-cleanup
 // يفحص حجم قاعدة البيانات، وإذا تجاوز حد التخزين المحدد في الإعدادات
 // يحذف أقدم عدد محدد من سجلات الأطفال (حذف فعلي + سجل تدقيق) ويستعيد المساحة
-// يُستدعى من: مؤقت Vercel Cron (عبر رأس x-cron-secret) أو يدويًا من حساب system_operator
+// يُستدعى من: مؤقت GitHub Actions (عبر رأس x-cron-secret) أو يدويًا من حساب system_operator
 export async function GET(request: Request) {
-  const client = await getSystemPgClient()
-  if (!client) return NextResponse.json({ error: 'DATABASE_URL غير مضبوطة' }, { status: 500 })
+  const admin = await createServiceRoleClient()
 
-  try {
-    // التحقق من الهوية: إما رأس المفتاح الخاص بالمؤقت أو جلسة system_operator
-    const user = await getCurrentUser()
-    const cronSecret = process.env.CRON_SECRET
-    const headerSecret = request.headers.get('x-cron-secret')
+  // التحقق من الهوية: إما رأس المفتاح الخاص بالمؤقت أو جلسة system_operator
+  const user = await getCurrentUser()
+  const cronSecret = process.env.CRON_SECRET
+  const headerSecret = request.headers.get('x-cron-secret')
 
-    let performedBy: string | null = null
-    if (user && user.role === 'system_operator') {
-      performedBy = user.id
-    } else if (cronSecret && headerSecret && headerSecret === cronSecret) {
-      // في وضع المؤقت (بلا جلسة): ننسب التدقيق لأول حساب system_operator موجود
-      const p = await client.query("SELECT id FROM user_profiles WHERE role = 'system_operator' ORDER BY id LIMIT 1")
-      performedBy = p.rows[0]?.id ?? null
-    } else {
-      return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
-    }
+  let performedBy: string | null = null
+  if (user && user.role === 'system_operator') {
+    performedBy = user.id
+  } else if (cronSecret && headerSecret && headerSecret === cronSecret) {
+    // في وضع المؤقت (بلا جلسة): ننسب التدقيق لأول حساب system_operator موجود
+    const { data } = await admin
+      .from('user_profiles')
+      .select('id')
+      .eq('role', 'system_operator')
+      .order('id', { ascending: true })
+      .limit(1)
+    performedBy = data?.[0]?.id ?? null
+  } else {
+    return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  }
 
-    // قراءة الإعدادات
-    const r = await client.query('SELECT key, value FROM system_settings')
-    const settings: Record<string, string> = {}
-    for (const row of r.rows) settings[row.key] = row.value
+  // قراءة الإعدادات
+  const { data: settingsRows } = await admin.from('system_settings').select('key, value')
+  const settings: Record<string, string> = {}
+  for (const row of settingsRows ?? []) settings[row.key] = row.value
 
-    const enabled = settings.auto_cleanup_enabled === 'true'
-    const thresholdBytes = Number(settings.auto_cleanup_threshold_bytes ?? 0)
-    const deleteAmount = Number(settings.auto_cleanup_delete_amount ?? 0)
+  const enabled = settings.auto_cleanup_enabled === 'true'
+  const thresholdBytes = Number(settings.auto_cleanup_threshold_bytes ?? 0)
+  const deleteAmount = Number(settings.auto_cleanup_delete_amount ?? 0)
 
-    const sizeRes = await client.query('SELECT pg_database_size(current_database())::bigint AS size')
-    const currentSize = sizeRes.rows[0].size
+  const { data: sizeRes } = await admin.rpc('get_database_total_size')
+  const currentSize = (sizeRes as number) ?? 0
 
-    if (!enabled) {
-      return NextResponse.json({ status: 'disabled', current_size: currentSize })
-    }
-    if (currentSize <= thresholdBytes || deleteAmount <= 0 || !performedBy) {
-      return NextResponse.json({ status: 'skipped', current_size: currentSize, threshold_bytes: thresholdBytes })
-    }
+  if (!enabled) {
+    return NextResponse.json({ status: 'disabled', current_size: currentSize })
+  }
+  if (currentSize <= thresholdBytes || deleteAmount <= 0 || !performedBy) {
+    return NextResponse.json({ status: 'skipped', current_size: currentSize, threshold_bytes: thresholdBytes })
+  }
 
-    // حذف أقدم سجلات الأطفال بالكمية المحددة
-    const deleted = await client.query(
-      `
-      WITH selected AS (
-        SELECT id FROM child_vaccination_records
-        ORDER BY created_at ASC
-        LIMIT $1
-      ),
-      deleted AS (
-        DELETE FROM child_vaccination_records
-        WHERE id IN (SELECT id FROM selected)
-        RETURNING id, to_jsonb(child_vaccination_records) AS old_value
-      )
-      INSERT INTO audit_log (table_name, record_id, action, performed_by, old_value)
-      SELECT 'child_vaccination_records', id, 'delete_attempt', $2, old_value FROM deleted
-      RETURNING 1
-      `,
-      [Math.min(Math.round(deleteAmount), 100000), performedBy]
+  // حذف أقدم سجلات الأطفال بالكمية المحددة
+  const limit = Math.min(Math.round(deleteAmount), 100000)
+  const { data: selected } = await admin
+    .from('child_vaccination_records')
+    .select('*')
+    .order('created_at', { ascending: true })
+    .limit(limit)
+
+  const rows = selected ?? []
+  if (rows.length > 0) {
+    const ids = rows.map((r) => r.id)
+    await admin.from('child_vaccination_records').delete().in('id', ids)
+    await admin.from('audit_log').insert(
+      rows.map((r) => ({
+        table_name: 'child_vaccination_records',
+        record_id: r.id,
+        action: 'delete_attempt',
+        performed_by: performedBy,
+        old_value: r,
+      }))
     )
+  }
 
-    // استعادة المساحة
-    let vacuumOk = false
-    let vacuumError: string | null = null
+  // استعادة المساحة (اختياري: يعمل فقط مع DATABASE_URL)
+  let vacuumOk = false
+  let vacuumError: string | null = null
+  const client = await getSystemPgClient()
+  if (client) {
     try {
       await client.query('VACUUM FULL public.child_vaccination_records')
       vacuumOk = true
     } catch (err) {
       vacuumError = err instanceof Error ? err.message : 'فشل VACUUM'
+    } finally {
+      await client.end()
     }
-
-    return NextResponse.json({
-      status: 'cleaned',
-      current_size: currentSize,
-      threshold_bytes: thresholdBytes,
-      deleted_records: deleted.rowCount ?? 0,
-      vacuum_ok: vacuumOk,
-      vacuum_error: vacuumError,
-    })
-  } finally {
-    await client.end()
+  } else {
+    vacuumError = 'DATABASE_URL غير مضبوطة — الحذف تم دون استعادة فورية للمساحة'
   }
+
+  return NextResponse.json({
+    status: 'cleaned',
+    current_size: currentSize,
+    threshold_bytes: thresholdBytes,
+    deleted_records: rows.length,
+    vacuum_ok: vacuumOk,
+    vacuum_error: vacuumError,
+  })
 }
