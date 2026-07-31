@@ -4,15 +4,18 @@ import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { validateEgyptianNationalId, checkGenderConsistency } from "@/lib/validation/national-id"
-import type { BatchBalanceView, Vaccinator } from "@/types/database"
+import type { BatchBalanceView, Vaccinator, ChildVaccinationRecord } from "@/types/database"
 
 interface Props {
   hospitalId: string
   batches: BatchBalanceView[]
   vaccinators: Vaccinator[]
+  record?: ChildVaccinationRecord | null
+  backPath?: string
 }
 
-export default function ChildRegistrationForm({ hospitalId, batches, vaccinators }: Props) {
+export default function ChildRegistrationForm({ hospitalId, batches, vaccinators, record, backPath = "/hospital-entry" }: Props) {
+  const isEditing = !!record
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -20,27 +23,27 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   const [warnings, setWarnings] = useState<string[]>([])
 
   // بيانات الطفل
-  const [childName, setChildName] = useState("")
-  const [childGender, setChildGender] = useState<"male" | "female">("male")
-  const [birthDate, setBirthDate] = useState("")
-  const [nationality, setNationality] = useState("مصري")
+  const [childName, setChildName] = useState(record?.child_full_name ?? "")
+  const [childGender, setChildGender] = useState<"male" | "female">(record?.child_gender ?? "male")
+  const [birthDate, setBirthDate] = useState(record?.birth_date ?? "")
+  const [nationality, setNationality] = useState(record?.child_nationality ?? "مصري")
 
   // بيانات الأب
-  const [fatherFirstName, setFatherFirstName] = useState("")
-  const [fatherGrandfather, setFatherGrandfather] = useState("")
-  const [fatherNationalId, setFatherNationalId] = useState("")
-  const [fatherPassport, setFatherPassport] = useState("")
+  const [fatherFirstName, setFatherFirstName] = useState(record?.father_first_name ?? "")
+  const [fatherGrandfather, setFatherGrandfather] = useState(record?.father_grandfather_name ?? "")
+  const [fatherNationalId, setFatherNationalId] = useState(record?.father_national_id ?? "")
+  const [fatherPassport, setFatherPassport] = useState(record?.father_passport_number ?? "")
 
   // بيانات الأم
-  const [motherFirstName, setMotherFirstName] = useState("")
-  const [motherGrandfather, setMotherGrandfather] = useState("")
-  const [motherNationalId, setMotherNationalId] = useState("")
-  const [motherPassport, setMotherPassport] = useState("")
+  const [motherFirstName, setMotherFirstName] = useState(record?.mother_first_name ?? "")
+  const [motherGrandfather, setMotherGrandfather] = useState(record?.mother_grandfather_name ?? "")
+  const [motherNationalId, setMotherNationalId] = useState(record?.mother_national_id ?? "")
+  const [motherPassport, setMotherPassport] = useState(record?.mother_passport_number ?? "")
 
   // بيانات التطعيم
-  const [batchId, setBatchId] = useState("")
-  const [vaccinatorId, setVaccinatorId] = useState("")
-  const [vaccinationDate, setVaccinationDate] = useState("")
+  const [batchId, setBatchId] = useState(record?.batch_id ?? "")
+  const [vaccinatorId, setVaccinatorId] = useState(record?.vaccinator_id ?? "")
+  const [vaccinationDate, setVaccinationDate] = useState(record?.vaccination_date ?? "")
 
   // التحقق من الرقم القومي (client-side)
   const validateNationalIdField = useCallback((id: string, field: "father" | "mother"): string | null => {
@@ -72,16 +75,18 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
     setWarnings([])
     setLoading(true)
 
-    // تحقق من الرصيد
+    // عند التعديل: نفس الدفعة لا تستهلك جرعة جديدة، لذا لا نمنع إعادة الحفظ
+    const isSameBatch = record != null && record.batch_id === batchId
     const selectedBatch = batches.find(b => b.batch_id === batchId)
-    if (selectedBatch && selectedBatch.remaining_balance <= 0) {
+
+    if (selectedBatch && selectedBatch.remaining_balance <= 0 && !isSameBatch) {
       setError(`الرصيد المتبقي لهذه الدفعة هو ${selectedBatch.remaining_balance}. لا يمكن التسجيل.`)
       setLoading(false)
       return
     }
 
     // تحقق من تاريخ الصلاحية
-    if (selectedBatch && vaccinationDate > selectedBatch.expiry_date) {
+    if (selectedBatch && vaccinationDate > selectedBatch.expiry_date && !isSameBatch) {
       if (!confirm(`تحذير: تاريخ الصلاحية للدفعة هو ${selectedBatch.expiry_date}، وتاريخ التطعيم ${vaccinationDate} بعده. هل أنت متأكد من المتابعة؟`)) {
         setLoading(false)
         return
@@ -89,7 +94,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
     }
 
     // تحقق من الرصيد المنخفض
-    if (selectedBatch && selectedBatch.remaining_balance <= 5) {
+    if (selectedBatch && selectedBatch.remaining_balance <= 5 && !isSameBatch) {
       if (!confirm(`الرصيد المتبقي للدفعة هو ${selectedBatch.remaining_balance} فقط. هل أنت متأكد من المتابعة؟`)) {
         setLoading(false)
         return
@@ -111,34 +116,37 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       return
     }
 
-    const { error: insertError } = await supabase
-      .from('child_vaccination_records')
-      .insert({
-        hospital_id: hospitalId,
-        child_full_name: childName,
-        child_gender: childGender,
-        birth_date: birthDate,
-        child_nationality: nationality,
-        father_first_name: fatherFirstName,
-        father_grandfather_name: fatherGrandfather,
-        father_national_id: fatherNationalId,
-        father_passport_number: fatherPassport || null,
-        mother_first_name: motherFirstName,
-        mother_grandfather_name: motherGrandfather,
-        mother_national_id: motherNationalId,
-        mother_passport_number: motherPassport || null,
-        vaccination_date: vaccinationDate,
-        batch_id: batchId,
-        vaccinator_id: vaccinatorId,
-      } as never)
+    const payload = {
+      child_full_name: childName,
+      child_gender: childGender,
+      birth_date: birthDate,
+      child_nationality: nationality,
+      father_first_name: fatherFirstName,
+      father_grandfather_name: fatherGrandfather,
+      father_national_id: fatherNationalId,
+      father_passport_number: fatherPassport || null,
+      mother_first_name: motherFirstName,
+      mother_grandfather_name: motherGrandfather,
+      mother_national_id: motherNationalId,
+      mother_passport_number: motherPassport || null,
+      vaccination_date: vaccinationDate,
+      batch_id: batchId,
+      vaccinator_id: vaccinatorId,
+    }
 
-    if (insertError) {
-      setError(insertError.message)
+    const query = isEditing
+      ? supabase.from('child_vaccination_records').update(payload as never).eq('id', record!.id)
+      : supabase.from('child_vaccination_records').insert({ hospital_id: hospitalId, ...payload } as never)
+
+    const { error: submitError } = await query
+
+    if (submitError) {
+      setError(submitError.message)
       setLoading(false)
       return
     }
 
-    router.push('/hospital-entry')
+    router.push(backPath)
     router.refresh()
   }
 
@@ -290,7 +298,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       <div className="flex gap-4">
         <button type="submit" disabled={loading}
           className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">
-          {loading ? "جاري الحفظ..." : "حفظ التسجيل"}
+          {loading ? "جاري الحفظ..." : isEditing ? "حفظ التعديلات" : "حفظ التسجيل"}
         </button>
         <button type="button" onClick={() => router.back()}
           className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-300">

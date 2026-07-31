@@ -34,7 +34,7 @@ export default function DashboardNav({ user }: { user: AuthUser }) {
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href={roleDashboards[user.role ?? ''] ?? '/'} className="text-lg font-bold text-gray-900 hover:text-blue-700">
-            نظام تتبع اللقاحات
+            نظام تتبع تطعيم كبدي B
           </Link>
           {pathname !== roleDashboards[user.role ?? ''] && (
             <Link href={roleDashboards[user.role ?? ''] ?? '/'} className="text-sm text-blue-600 hover:text-blue-800">

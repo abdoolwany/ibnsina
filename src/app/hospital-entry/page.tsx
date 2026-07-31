@@ -1,7 +1,7 @@
 import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getChildrenByHospital } from '@/lib/db/children'
-import { getAvailableBatches } from '@/lib/db/batches'
+import { getAvailableBatches, getBatchBalance } from '@/lib/db/batches'
 import { getActiveVaccinators } from '@/lib/db/vaccinators'
 import { getHospitalById } from '@/lib/db/hospitals'
 import Link from 'next/link'
@@ -15,7 +15,9 @@ export default async function HospitalEntryPage() {
   const hospital = await getHospitalById(hospitalId)
   const children = await getChildrenByHospital(hospitalId)
   const batches = await getAvailableBatches(hospitalId)
+  const allBalances = await getBatchBalance(hospitalId)
   const unverified = children.filter(c => !c.is_verified)
+  const batchMap = Object.fromEntries(allBalances.map(b => [b.batch_id, b.batch_number]))
 
   return (
     <DashboardShell allowedRoles={['hospital_entry']}>
@@ -57,20 +59,37 @@ export default async function HospitalEntryPage() {
                 <thead>
                   <tr className="border-b text-right">
                     <th className="py-2 px-3">اسم الطفل</th>
+                    <th className="py-2 px-3">تاريخ الميلاد</th>
                     <th className="py-2 px-3">تاريخ التطعيم</th>
+                    <th className="py-2 px-3">اسم الأب</th>
+                    <th className="py-2 px-3">اسم الأم</th>
+                    <th className="py-2 px-3">رقم التشغيلة</th>
                     <th className="py-2 px-3">الحالة</th>
+                    <th className="py-2 px-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {children.slice(0, 20).map(child => (
                     <tr key={child.id} className="border-b hover:bg-gray-50">
-                      <td className="py-2 px-3">{child.child_full_name}</td>
+                      <td className="py-2 px-3 font-medium">{child.child_full_name}</td>
+                      <td className="py-2 px-3">{child.birth_date}</td>
                       <td className="py-2 px-3">{child.vaccination_date}</td>
+                      <td className="py-2 px-3">{child.father_first_name} {child.father_grandfather_name}</td>
+                      <td className="py-2 px-3">{child.mother_first_name} {child.mother_grandfather_name}</td>
+                      <td className="py-2 px-3">{batchMap[child.batch_id] ?? '-'}</td>
                       <td className="py-2 px-3">
                         {child.is_verified
                           ? <span className="text-green-600">موثق</span>
                           : <span className="text-yellow-600">بانتظار التوثيق</span>
                         }
+                      </td>
+                      <td className="py-2 px-3">
+                        {!child.is_verified && (
+                          <Link href={`/hospital-entry/${child.id}/edit`}
+                            className="bg-blue-50 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-100">
+                            تعديل
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   ))}

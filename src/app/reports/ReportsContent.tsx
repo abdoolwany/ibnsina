@@ -78,6 +78,10 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
   }
 
   const hospitalMap = Object.fromEntries(hospitals.map(h => [h.id, h.name]))
+  const selectedHospitalName = hospitalId ? hospitalMap[hospitalId] : null
+  const reportHospitalName = selectedHospitalName
+    ?? (userRole !== 'moh_admin' ? hospitals.map(h => h.name).join('، ') : 'كل المستشفيات')
+  const reportDateRange = dateFrom || dateTo ? `من ${dateFrom || '...'} إلى ${dateTo || '...'}` : ''
 
   return (
     <div className="space-y-6">
@@ -152,7 +156,13 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
       {/* Results */}
       {records.length > 0 && (
         <div ref={printRef} className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b print:block">
+          {/* ترويسة الطباعة فقط */}
+          <div className="hidden print:block text-center mb-4 p-4">
+            <h1 className="text-xl font-bold">تقرير الأطفال المتطعّمين</h1>
+            {reportDateRange && <p className="mt-1 text-sm">{reportDateRange}</p>}
+            <p className="mt-1 text-sm">المستشفى: {reportHospitalName}</p>
+          </div>
+          <div className="p-4 border-b print:hidden">
             <h3 className="font-semibold">نتائج البحث ({records.length})</h3>
           </div>
           <div className="overflow-x-auto">
@@ -169,7 +179,6 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                   <th className="py-3 px-3">القائم بالتطعيم</th>
                   <th className="py-3 px-3">رقم التشغيلة</th>
                   <th className="py-3 px-3">تاريخ الدفعة</th>
-                  <th className="py-3 px-3">الحالة</th>
                 </tr>
               </thead>
               <tbody>
@@ -185,12 +194,6 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                     <td className="py-2 px-3">{r.vaccinators?.full_name ?? '-'}</td>
                     <td className="py-2 px-3">{r.vaccine_batches?.batch_number ?? '-'}</td>
                     <td className="py-2 px-3">{r.vaccine_batches?.delivery_date ?? '-'}</td>
-                    <td className="py-2 px-3">
-                      {r.is_verified
-                        ? <span className="text-green-600">موثق</span>
-                        : <span className="text-yellow-600">غير موثق</span>
-                      }
-                    </td>
                   </tr>
                 ))}
               </tbody>

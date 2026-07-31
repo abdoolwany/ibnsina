@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import type { ChildVaccinationRecord } from "@/types/database"
@@ -48,6 +49,7 @@ export default function VerifyList({
         <thead>
           <tr className="border-b text-right">
             <th className="py-2 px-3">اسم الطفل</th>
+            <th className="py-2 px-3">اسم الأب</th>
             <th className="py-2 px-3">تاريخ التطعيم</th>
             <th className="py-2 px-3">تاريخ الميلاد</th>
             <th className="py-2 px-3"></th>
@@ -56,17 +58,24 @@ export default function VerifyList({
         <tbody>
           {records.map((child) => (
             <tr key={child.id} className="border-b hover:bg-gray-50">
-              <td className="py-2 px-3">{child.child_full_name}</td>
+              <td className="py-2 px-3 font-medium">{child.child_full_name}</td>
+              <td className="py-2 px-3">{child.father_first_name} {child.father_grandfather_name}</td>
               <td className="py-2 px-3">{child.vaccination_date}</td>
               <td className="py-2 px-3">{child.birth_date}</td>
               <td className="py-2 px-3">
-                <button
-                  onClick={() => handleVerify(child.id)}
-                  disabled={verifyingId === child.id}
-                  className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
-                >
-                  {verifyingId === child.id ? "جاري التوثيق..." : "توثيق"}
-                </button>
+                <div className="flex gap-2">
+                  <Link href={`/hospital-verifier/${child.id}/edit`}
+                    className="bg-blue-50 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-100">
+                    تعديل
+                  </Link>
+                  <button
+                    onClick={() => handleVerify(child.id)}
+                    disabled={verifyingId === child.id}
+                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {verifyingId === child.id ? "جاري التوثيق..." : "توثيق"}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
