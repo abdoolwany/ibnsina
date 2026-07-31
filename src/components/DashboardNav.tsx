@@ -10,6 +10,7 @@ const roleLabels: Record<string, string> = {
   hospital_verifier: 'موثق',
   moh_level1: 'وزارة - مستوى أول',
   moh_admin: 'الإدارة العليا',
+  system_operator: 'مشغل النظام',
 }
 
 const roleDashboards: Record<string, string> = {
@@ -17,6 +18,7 @@ const roleDashboards: Record<string, string> = {
   hospital_verifier: '/hospital-verifier',
   moh_level1: '/moh-level1',
   moh_admin: '/moh-admin',
+  system_operator: '/system-operator',
 }
 
 export default function DashboardNav({ user }: { user: AuthUser }) {
@@ -41,12 +43,16 @@ export default function DashboardNav({ user }: { user: AuthUser }) {
               الرئيسية
             </Link>
           )}
-          <Link href="/reports" className={`text-sm ${pathname === '/reports' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
-            التقارير
-          </Link>
-          <Link href="/reports/batches" className={`text-sm ${pathname.startsWith('/reports/batches') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
-            حركة الطعوم
-          </Link>
+          {user.role !== 'system_operator' && (
+            <>
+              <Link href="/reports" className={`text-sm ${pathname === '/reports' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+                التقارير
+              </Link>
+              <Link href="/reports/batches" className={`text-sm ${pathname.startsWith('/reports/batches') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+                حركة الطعوم
+              </Link>
+            </>
+          )}
           <Link href="/account" className={`text-sm ${pathname.startsWith('/account') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
             حسابي
           </Link>

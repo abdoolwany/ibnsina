@@ -1,0 +1,20 @@
+name: Nightly auto-cleanup
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/system/auto-cleanup
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sS -X GET \
+            -H "x-cron-secret: $CRON_SECRET" \
+            "https://ibnsina.vercel.app/api/system/auto-cleanup" \
+            -o /tmp/response.json -w "HTTP %{http_code}\n" || true
+          cat /tmp/response.json 2>/dev/null || true

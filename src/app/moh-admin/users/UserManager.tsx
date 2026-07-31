@@ -17,6 +17,7 @@ const roleLabels: Record<UserRole, string> = {
   hospital_verifier: 'موثق',
   moh_level1: 'وزارة - مستوى أول',
   moh_admin: 'إدارة عليا',
+  system_operator: 'مشغل النظام',
 }
 
 export default function UserManager({ hospitals, currentUserId }: { hospitals: Hospital[]; currentUserId: string }) {
@@ -213,13 +214,13 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`px-2 py-0.5 rounded text-xs ${u.role === 'moh_admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                  <span className={`px-2 py-0.5 rounded text-xs ${u.role === 'moh_admin' ? 'bg-purple-100 text-purple-800' : u.role === 'system_operator' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
                     {roleLabels[u.role] || u.role}
                   </span>
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex flex-wrap gap-1">
-                    {u.role !== 'moh_admin' && hospitals.map(h => (
+                    {u.role !== 'moh_admin' && u.role !== 'system_operator' && hospitals.map(h => (
                       <button key={h.id}
                         onClick={() => handleUpdateLinks(u.id, toggleHospital(u.user_hospital_links?.map(l => l.hospital_id) ?? [], h.id))}
                         className={`text-xs px-2 py-0.5 rounded border ${(u.user_hospital_links || []).some(l => l.hospital_id === h.id) ? 'bg-green-100 border-green-300 text-green-700' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>
@@ -227,6 +228,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                       </button>
                     ))}
                     {u.role === 'moh_admin' && <span className="text-xs text-gray-400">كل النظام</span>}
+                    {u.role === 'system_operator' && <span className="text-xs text-gray-400">—</span>}
                   </div>
                 </td>
                 <td className="py-3 px-4">

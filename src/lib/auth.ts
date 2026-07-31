@@ -38,6 +38,7 @@ export function getDashboardUrl(role: UserRole | null): string {
     case 'hospital_verifier': return '/hospital-verifier'
     case 'moh_level1': return '/moh-level1'
     case 'moh_admin': return '/moh-admin'
+    case 'system_operator': return '/system-operator'
     default: return '/'
   }
 }

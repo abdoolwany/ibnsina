@@ -1,0 +1,31 @@
+
+> temp-ibnsina@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.12 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.10:3000
+- Environments: .env.local
+✓ Ready in 1051ms
+
+ GET /api/system/auto-cleanup 200 in 2.5s (next.js: 1084ms, proxy.ts: 128ms, application-code: 1269ms)
+ GET /api/system/auto-cleanup 403 in 663ms (next.js: 12ms, proxy.ts: 25ms, application-code: 627ms)
+ GET /api/system/storage 403 in 243ms (next.js: 220ms, proxy.ts: 13ms, application-code: 10ms)
+ GET /api/debug/whoami 200 in 347ms (next.js: 294ms, proxy.ts: 34ms, application-code: 19ms)
+ GET /api/debug/whoami 200 in 43ms (next.js: 7ms, proxy.ts: 26ms, application-code: 11ms)
+ GET /api/debug/whoami 200 in 27ms (next.js: 6ms, proxy.ts: 10ms, application-code: 11ms)
+ GET /api/debug/cookies 200 in 241ms (next.js: 192ms, proxy.ts: 33ms, application-code: 16ms)
+ GET /api/debug/cookies 200 in 452ms (next.js: 4ms, proxy.ts: 437ms, application-code: 12ms)
+ GET /api/debug/whoami 200 in 1101ms (next.js: 80ms, proxy.ts: 351ms, application-code: 670ms)
+ GET /api/system/storage 200 in 1654ms (next.js: 77ms, proxy.ts: 378ms, application-code: 1199ms)
+ GET /api/system/settings 200 in 1309ms (next.js: 209ms, proxy.ts: 214ms, application-code: 887ms)
+ POST /api/system/settings 500 in 761ms (next.js: 4ms, proxy.ts: 320ms, application-code: 437ms)
+ POST /api/system/delete-records 500 in 675ms (next.js: 176ms, proxy.ts: 195ms, application-code: 304ms)
+ POST /api/system/delete-records 500 in 527ms (next.js: 18ms, proxy.ts: 200ms, application-code: 309ms)
+ POST /api/system/delete-records 500 in 485ms (next.js: 3ms, proxy.ts: 182ms, application-code: 300ms)
+ POST /api/system/settings 200 in 2.6s (next.js: 12ms, proxy.ts: 747ms, application-code: 1800ms)
+ POST /api/system/delete-records 200 in 1053ms (next.js: 13ms, proxy.ts: 187ms, application-code: 853ms)
+ POST /api/system/delete-records 200 in 1118ms (next.js: 3ms, proxy.ts: 198ms, application-code: 917ms)
+ POST /api/system/delete-records 200 in 1079ms (next.js: 3ms, proxy.ts: 211ms, application-code: 864ms)
+ GET /api/system/auto-cleanup 200 in 1473ms (next.js: 53ms, proxy.ts: 310ms, application-code: 1110ms)
+ GET /api/system/storage 403 in 29ms (next.js: 4ms, proxy.ts: 15ms, application-code: 10ms)

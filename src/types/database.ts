@@ -1,4 +1,4 @@
-export type UserRole = 'hospital_entry' | 'hospital_verifier' | 'moh_level1' | 'moh_admin'
+export type UserRole = 'hospital_entry' | 'hospital_verifier' | 'moh_level1' | 'moh_admin' | 'system_operator'
 
 export type Gender = 'male' | 'female'
 
