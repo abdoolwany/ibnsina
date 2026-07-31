@@ -97,3 +97,29 @@ export async function PUT(request: Request) {
 
   return NextResponse.json({ success: true })
 }
+
+export async function DELETE(request: Request) {
+  const supabase = await createServerSupabase()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
+
+  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
+  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+
+  const { userId } = await request.json()
+  if (!userId) return NextResponse.json({ error: 'معرّف المستخدم مطلوب' }, { status: 400 })
+
+  if (userId === user.id) {
+    return NextResponse.json({ error: 'لا يمكنك حذف حسابك الحالي' }, { status: 400 })
+  }
+
+  const admin = await createServiceRoleClient()
+
+  await admin.from('user_hospital_links').delete().eq('user_id', userId)
+  await admin.from('user_profiles').delete().eq('id', userId)
+
+  const { error } = await admin.auth.admin.deleteUser(userId)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
+}

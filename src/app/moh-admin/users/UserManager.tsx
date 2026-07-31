@@ -18,12 +18,15 @@ const roleLabels: Record<UserRole, string> = {
   moh_admin: 'إدارة عليا',
 }
 
-export default function UserManager({ hospitals }: { hospitals: Hospital[] }) {
+export default function UserManager({ hospitals, currentUserId }: { hospitals: Hospital[]; currentUserId: string }) {
   const router = useRouter()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState("")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState("")
+  const [editRole, setEditRole] = useState<UserRole>('hospital_entry')
 
   // New user form
   const [email, setEmail] = useState("")
@@ -35,6 +38,7 @@ export default function UserManager({ hospitals }: { hospitals: Hospital[] }) {
   async function loadUsers() {
     const res = await fetch('/api/admin/users')
     const data = await res.json()
+    if (!res.ok) { setError(data.error ?? 'خطأ في جلب المستخدمين'); setLoading(false); return }
     setUsers(data.users ?? [])
     setLoading(false)
   }
@@ -65,8 +69,40 @@ export default function UserManager({ hospitals }: { hospitals: Hospital[] }) {
     loadUsers()
   }
 
+  async function handleSaveEdit(u: UserProfile) {
+    const res = await fetch('/api/admin/users', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: u.id, fullName: editName, role: editRole }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError(data.error); return }
+    setEditingId(null)
+    setError("")
+    loadUsers()
+  }
+
+  async function handleDelete(u: UserProfile) {
+    if (!confirm(`هل أنت متأكد من حذف المستخدم "${u.full_name}"؟ لا يمكن التراجع.`)) return
+    setError("")
+    const res = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: u.id }),
+    })
+    const data = await res.json()
+    if (!res.ok) { setError(data.error); return }
+    loadUsers()
+  }
+
   function toggleHospital(arr: string[], id: string): string[] {
     return arr.includes(id) ? arr.filter(x => x !== id) : [...arr, id]
+  }
+
+  function startEdit(u: UserProfile) {
+    setEditingId(u.id)
+    setEditName(u.full_name)
+    setEditRole(u.role)
   }
 
   if (loading) return <p className="text-gray-500">جاري التحميل...</p>
@@ -122,23 +158,43 @@ export default function UserManager({ hospitals }: { hospitals: Hospital[] }) {
         </form>
       )}
 
+      {error && <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>}
+
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b text-right">
               <th className="py-3 px-4">الاسم</th>
-              <th className="py-3 px-4">البريد</th>
               <th className="py-3 px-4">الدور</th>
               <th className="py-3 px-4">المستشفيات</th>
+              <th className="py-3 px-4">إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {users.map(u => (
               <tr key={u.id} className="border-b hover:bg-gray-50">
-                <td className="py-3 px-4">{u.full_name}</td>
-                <td className="py-3 px-4 text-gray-500">-</td>
                 <td className="py-3 px-4">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">
+                  {editingId === u.id ? (
+                    <div className="space-y-2">
+                      <input type="text" value={editName} onChange={e => setEditName(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm" />
+                      <select value={editRole} onChange={e => setEditRole(e.target.value as UserRole)}
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm">
+                        {Object.entries(roleLabels).map(([key, label]) => (
+                          <option key={key} value={key}>{label}</option>
+                        ))}
+                      </select>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleSaveEdit(u)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">حفظ</button>
+                        <button onClick={() => setEditingId(null)} className="bg-gray-200 px-3 py-1 rounded text-xs hover:bg-gray-300">إلغاء</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <span>{u.full_name}</span>
+                  )}
+                </td>
+                <td className="py-3 px-4">
+                  <span className={`px-2 py-0.5 rounded text-xs ${u.role === 'moh_admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
                     {roleLabels[u.role] || u.role}
                   </span>
                 </td>
@@ -152,6 +208,14 @@ export default function UserManager({ hospitals }: { hospitals: Hospital[] }) {
                       </button>
                     ))}
                     {u.role === 'moh_admin' && <span className="text-xs text-gray-400">كل النظام</span>}
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex gap-2">
+                    <button onClick={() => startEdit(u)} className="text-blue-600 hover:text-blue-800 text-sm">تعديل</button>
+                    {u.id !== currentUserId && (
+                      <button onClick={() => handleDelete(u)} className="text-red-600 hover:text-red-800 text-sm">حذف</button>
+                    )}
                   </div>
                 </td>
               </tr>

@@ -14,7 +14,7 @@ export default async function UsersPage() {
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">إدارة المستخدمين</h2>
         <p className="text-gray-600">إنشاء حسابات جديدة وتحديد الأدوار والصلاحيات</p>
-        <UserManager hospitals={hospitals} />
+        <UserManager hospitals={hospitals} currentUserId={user.id} />
       </div>
     </DashboardShell>
   )
