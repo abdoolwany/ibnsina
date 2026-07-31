@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import type { UserRole, Hospital } from "@/types/database"
 
 interface BatchMovementRow {
@@ -29,11 +29,11 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const [totals, setTotals] = useState<{ received: number; used: number; remaining: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [hasSearched, setHasSearched] = useState(false)
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
+  const runSearch = useCallback(async (showExpired: boolean) => {
     setLoading(true)
     setError("")
 
@@ -41,7 +41,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
     if (hospitalId) params.set('hospital_id', hospitalId)
-    if (includeExpired) params.set('include_expired', 'true')
+    if (showExpired) params.set('include_expired', 'true')
 
     try {
       const res = await fetch(`/api/reports/batches?${params}`)
@@ -57,7 +57,19 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     }
 
     setLoading(false)
+  }, [dateFrom, dateTo, hospitalId])
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    setHasSearched(true)
+    runSearch(includeExpired)
   }
+
+  // إعادة التحميل فورًا عند تبديل إظهار/إخفاء التشغيلات المنتهية
+  useEffect(() => {
+    if (hasSearched) runSearch(includeExpired)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeExpired])
 
   return (
     <div className="space-y-6">
@@ -144,8 +156,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
               {totals && (
                 <tfoot>
                   <tr className="bg-gray-50 font-bold">
-                    {isMinistry && <td className="py-3 px-3" />}
-                    <td className="py-3 px-3" colSpan={isMinistry ? 3 : 2}>الإجمالي</td>
+                    <td className="py-3 px-3" colSpan={isMinistry ? 4 : 3}>الإجمالي</td>
                     <td className="py-3 px-3">{totals.received}</td>
                     <td className="py-3 px-3">{totals.used}</td>
                     <td className="py-3 px-3">{totals.remaining}</td>
