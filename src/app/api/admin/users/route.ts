@@ -92,8 +92,16 @@ export async function PUT(request: Request) {
   const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
   if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
 
-  const { userId, role, fullName, username, hospitalIds } = await request.json()
+  const { userId, role, fullName, username, hospitalIds, newPassword } = await request.json()
   const admin = await createServiceRoleClient()
+
+  if (newPassword !== undefined) {
+    if (typeof newPassword !== 'string' || newPassword.length < 6) {
+      return NextResponse.json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' }, { status: 400 })
+    }
+    const { error: pwErr } = await admin.auth.admin.updateUserById(userId, { password: newPassword })
+    if (pwErr) return NextResponse.json({ error: pwErr.message }, { status: 500 })
+  }
 
   if (username !== undefined) {
     if (!isValidUsername(username)) {

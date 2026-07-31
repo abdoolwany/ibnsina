@@ -29,6 +29,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
   const [editName, setEditName] = useState("")
   const [editRole, setEditRole] = useState<UserRole>('hospital_entry')
   const [editUsername, setEditUsername] = useState("")
+  const [editPassword, setEditPassword] = useState("")
 
   // New user form
   const [username, setUsername] = useState("")
@@ -75,7 +76,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
     const res = await fetch('/api/admin/users', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: u.id, fullName: editName, role: editRole, username: editUsername }),
+      body: JSON.stringify({ userId: u.id, fullName: editName, role: editRole, username: editUsername, newPassword: editPassword || undefined }),
     })
     const data = await res.json()
     if (!res.ok) { setError(data.error); return }
@@ -106,6 +107,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
     setEditName(u.full_name)
     setEditRole(u.role)
     setEditUsername(u.username ?? '')
+    setEditPassword("")
   }
 
   if (loading) return <p className="text-gray-500">جاري التحميل...</p>
@@ -198,6 +200,9 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                           <option key={key} value={key}>{label}</option>
                         ))}
                       </select>
+                      <input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)}
+                        placeholder="كلمة سر جديدة (اتركها فارغة لعدم التغيير)"
+                        className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm" />
                       <div className="flex gap-2">
                         <button onClick={() => handleSaveEdit(u)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">حفظ</button>
                         <button onClick={() => setEditingId(null)} className="bg-gray-200 px-3 py-1 rounded text-xs hover:bg-gray-300">إلغاء</button>

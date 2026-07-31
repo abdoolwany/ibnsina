@@ -44,6 +44,9 @@ export default function DashboardNav({ user }: { user: AuthUser }) {
           <Link href="/reports" className={`text-sm ${pathname.startsWith('/reports') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
             التقارير
           </Link>
+          <Link href="/account" className={`text-sm ${pathname.startsWith('/account') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+            حسابي
+          </Link>
           <span className="text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
             {roleLabels[user.role ?? ''] ?? user.role}
           </span>
