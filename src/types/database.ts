@@ -12,6 +12,7 @@ export interface UserProfile {
   id: string
   role: UserRole
   full_name: string
+  username?: string | null
 }
 
 export interface UserHospitalLink {

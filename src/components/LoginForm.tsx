@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
+import { usernameToEmail } from "@/lib/validation"
 import { useRouter } from "next/navigation"
 
 export default function LoginForm() {
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
@@ -16,6 +17,10 @@ export default function LoginForm() {
     e.preventDefault()
     setError("")
     setLoading(true)
+
+    const trimmed = username.trim()
+    // إذا كان الإدخال بدون @ فهو اسم مستخدم عادي يُحوَّل لبريد داخلي
+    const email = trimmed.includes('@') ? trimmed : usernameToEmail(trimmed)
 
     const { error: authError } = await supabase.auth.signInWithPassword({
       email,
@@ -44,17 +49,17 @@ export default function LoginForm() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              البريد الإلكتروني
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              اسم المستخدم
             </label>
             <input
-              id="email"
-              type="email"
+              id="username"
+              type="text"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-              placeholder="admin@example.com"
+              placeholder="مثال: moh.admin"
             />
           </div>
 

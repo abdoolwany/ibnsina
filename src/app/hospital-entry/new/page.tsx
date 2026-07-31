@@ -27,7 +27,6 @@ export default async function NewChildPage() {
       </div>
       <ChildRegistrationForm
         hospitalId={hospitalId}
-        enteredBy={user.id}
         batches={batches}
         vaccinators={vaccinators}
       />

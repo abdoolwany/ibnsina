@@ -7,6 +7,7 @@ import type { Hospital, UserRole } from "@/types/database"
 interface UserProfile {
   id: string
   full_name: string
+  username?: string | null
   role: UserRole
   user_hospital_links: { hospital_id: string }[]
 }
@@ -27,9 +28,10 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
   const [editRole, setEditRole] = useState<UserRole>('hospital_entry')
+  const [editUsername, setEditUsername] = useState("")
 
   // New user form
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [fullName, setFullName] = useState("")
   const [role, setRole] = useState<UserRole>('hospital_entry')
@@ -51,12 +53,12 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, fullName, role, hospitalIds: selectedHospitals }),
+      body: JSON.stringify({ username, password, fullName, role, hospitalIds: selectedHospitals }),
     })
     const data = await res.json()
     if (!res.ok) { setError(data.error); return }
     setShowForm(false)
-    setEmail(""); setPassword(""); setFullName(""); setRole('hospital_entry'); setSelectedHospitals([])
+    setUsername(""); setPassword(""); setFullName(""); setRole('hospital_entry'); setSelectedHospitals([])
     loadUsers()
   }
 
@@ -73,7 +75,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
     const res = await fetch('/api/admin/users', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: u.id, fullName: editName, role: editRole }),
+      body: JSON.stringify({ userId: u.id, fullName: editName, role: editRole, username: editUsername }),
     })
     const data = await res.json()
     if (!res.ok) { setError(data.error); return }
@@ -103,6 +105,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
     setEditingId(u.id)
     setEditName(u.full_name)
     setEditRole(u.role)
+    setEditUsername(u.username ?? '')
   }
 
   if (loading) return <p className="text-gray-500">جاري التحميل...</p>
@@ -122,8 +125,9 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">البريد الإلكتروني</label>
-              <input type="email" required value={email} onChange={e => setEmail(e.target.value)}
+              <label className="block text-sm font-medium text-gray-700">اسم المستخدم</label>
+              <input type="text" required value={username} onChange={e => setUsername(e.target.value)}
+                placeholder="بدون @"
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
             </div>
             <div>
@@ -164,6 +168,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b text-right">
+              <th className="py-3 px-4">اسم المستخدم</th>
               <th className="py-3 px-4">الاسم</th>
               <th className="py-3 px-4">الدور</th>
               <th className="py-3 px-4">المستشفيات</th>
@@ -173,6 +178,15 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
           <tbody>
             {users.map(u => (
               <tr key={u.id} className="border-b hover:bg-gray-50">
+                <td className="py-3 px-4 font-mono text-xs">
+                  {editingId === u.id ? (
+                    <input type="text" value={editUsername} onChange={e => setEditUsername(e.target.value)}
+                      placeholder="بدون @"
+                      className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm" />
+                  ) : (
+                    <span className="text-blue-700">{u.username ?? '-'}</span>
+                  )}
+                </td>
                 <td className="py-3 px-4">
                   {editingId === u.id ? (
                     <div className="space-y-2">

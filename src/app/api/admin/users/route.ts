@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase, createServiceRoleClient } from '@/lib/supabase/server'
+import { isValidUsername, usernameToEmail } from '@/lib/validation'
 import type { UserRole } from '@/types/database'
 
 export async function GET() {
@@ -24,10 +25,14 @@ export async function POST(request: Request) {
   const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
   if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
 
-  const { email, password, fullName, role, hospitalIds } = await request.json()
+  const { username, password, fullName, role, hospitalIds } = await request.json()
 
-  if (!email || !password || !fullName || !role) {
+  if (!username || !password || !fullName || !role) {
     return NextResponse.json({ error: 'جميع الحقول مطلوبة' }, { status: 400 })
+  }
+
+  if (!isValidUsername(username)) {
+    return NextResponse.json({ error: 'اسم المستخدم غير صالح (3-30 حرفًا: أحرف، أرقام، . _ - بدون @)' }, { status: 400 })
   }
 
   const validRoles: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1', 'moh_admin']
@@ -37,10 +42,19 @@ export async function POST(request: Request) {
 
   const admin = await createServiceRoleClient()
 
+  // التحقق من عدم تكرار اسم المستخدم
+  const { data: existing } = await admin.from('user_profiles').select('id').eq('username', username.toLowerCase()).maybeSingle()
+  if (existing) {
+    return NextResponse.json({ error: 'اسم المستخدم مستخدم بالفعل' }, { status: 409 })
+  }
+
+  const email = usernameToEmail(username)
+
   const { data: authData, error: authError } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
+    user_metadata: { username: username.toLowerCase() },
   })
 
   if (authError) {
@@ -51,6 +65,7 @@ export async function POST(request: Request) {
     id: authData.user.id,
     role,
     full_name: fullName,
+    username: username.toLowerCase(),
   })
 
   if (profileError) {
@@ -77,9 +92,27 @@ export async function PUT(request: Request) {
   const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
   if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
 
-  const { userId, role, fullName, hospitalIds } = await request.json()
+  const { userId, role, fullName, username, hospitalIds } = await request.json()
   const admin = await createServiceRoleClient()
 
+  if (username !== undefined) {
+    if (!isValidUsername(username)) {
+      return NextResponse.json({ error: 'اسم المستخدم غير صالح' }, { status: 400 })
+    }
+    const newUsername = username.toLowerCase()
+    const { data: existing } = await admin.from('user_profiles').select('id').eq('username', newUsername).maybeSingle()
+    if (existing && existing.id !== userId) {
+      return NextResponse.json({ error: 'اسم المستخدم مستخدم بالفعل' }, { status: 409 })
+    }
+    const newEmail = usernameToEmail(newUsername)
+    const { error: emailErr } = await admin.auth.admin.updateUserById(userId, {
+      email: newEmail,
+      email_confirm: true,
+      user_metadata: { username: newUsername },
+    })
+    if (emailErr) return NextResponse.json({ error: emailErr.message }, { status: 500 })
+    await admin.from('user_profiles').update({ username: newUsername }).eq('id', userId)
+  }
   if (role) {
     await admin.from('user_profiles').update({ role } as never).eq('id', userId)
   }

@@ -8,12 +8,11 @@ import type { BatchBalanceView, Vaccinator } from "@/types/database"
 
 interface Props {
   hospitalId: string
-  enteredBy: string
   batches: BatchBalanceView[]
   vaccinators: Vaccinator[]
 }
 
-export default function ChildRegistrationForm({ hospitalId, enteredBy, batches, vaccinators }: Props) {
+export default function ChildRegistrationForm({ hospitalId, batches, vaccinators }: Props) {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
@@ -124,16 +123,13 @@ export default function ChildRegistrationForm({ hospitalId, enteredBy, batches, 
         father_grandfather_name: fatherGrandfather,
         father_national_id: fatherNationalId,
         father_passport_number: fatherPassport || null,
-        father_id_image_key: 'placeholder',
         mother_first_name: motherFirstName,
         mother_grandfather_name: motherGrandfather,
         mother_national_id: motherNationalId,
         mother_passport_number: motherPassport || null,
-        mother_id_image_key: 'placeholder',
         vaccination_date: vaccinationDate,
         batch_id: batchId,
         vaccinator_id: vaccinatorId,
-        entered_by: enteredBy,
       } as never)
 
     if (insertError) {
