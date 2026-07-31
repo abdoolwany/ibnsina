@@ -3,6 +3,7 @@ import { createServerSupabase } from '@/lib/supabase/server'
 
 type ChildRecord = Record<string, unknown> & {
   id: string
+  hospital_id: string
   child_full_name: string
   child_gender: string
   birth_date: string
@@ -11,11 +12,20 @@ type ChildRecord = Record<string, unknown> & {
   father_national_id: string
   mother_first_name: string
   mother_grandfather_name: string
-  mother_national_id: string
+  mother_national_id: string | null
   vaccination_date: string
   is_verified: boolean
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
+  hospitals: { name: string } | null
+}
+
+interface HospitalStat {
+  hospital_id: string
+  hospital_name: string
+  total: number
+  male: number
+  female: number
 }
 
 export async function GET(request: Request) {
@@ -29,7 +39,6 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const dateFrom = searchParams.get('date_from')
   const dateTo = searchParams.get('date_to')
-  const search = searchParams.get('search')
   const hospitalId = searchParams.get('hospital_id')
 
   // Get user profile and links
@@ -46,12 +55,10 @@ export async function GET(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
     .from('child_vaccination_records')
-    .select('*, vaccinators(full_name), vaccine_batches!inner(delivery_date, batch_number, expiry_date)')
+    .select('*, vaccinators(full_name), vaccine_batches!inner(delivery_date, batch_number, expiry_date), hospitals(name)')
 
   // Apply hospital isolation
-  if (role === 'hospital_entry' || role === 'hospital_verifier') {
-    query = query.in('hospital_id', userHospitalIds)
-  } else if (role === 'moh_level1') {
+  if (role !== 'moh_admin') {
     query = query.in('hospital_id', userHospitalIds)
   }
 
@@ -63,11 +70,6 @@ export async function GET(request: Request) {
   // Date range filter
   if (dateFrom) query = query.gte('vaccination_date', dateFrom)
   if (dateTo) query = query.lte('vaccination_date', dateTo)
-
-  // Text search
-  if (search) {
-    query = query.or(`child_full_name.ilike.%${search}%,father_first_name.ilike.%${search}%,father_grandfather_name.ilike.%${search}%`)
-  }
 
   query = query.eq('is_deleted', false).order('vaccination_date', { ascending: false })
 
@@ -83,6 +85,22 @@ export async function GET(request: Request) {
   const males = allRecords.filter(r => r.child_gender === 'male').length
   const females = allRecords.filter(r => r.child_gender === 'female').length
 
+  // إحصائيات لكل مستشفى على حدة
+  const byHospital = new Map<string, HospitalStat>()
+  for (const r of allRecords) {
+    const existing = byHospital.get(r.hospital_id) ?? {
+      hospital_id: r.hospital_id,
+      hospital_name: r.hospitals?.name ?? 'غير معروف',
+      total: 0,
+      male: 0,
+      female: 0,
+    }
+    existing.total++
+    if (r.child_gender === 'male') existing.male++
+    if (r.child_gender === 'female') existing.female++
+    byHospital.set(r.hospital_id, existing)
+  }
+
   // Log the report generation
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const logEntry: any = {
@@ -91,7 +109,7 @@ export async function GET(request: Request) {
     action: 'insert',
     performed_by: user.id,
     new_value: {
-      report_params: { date_from: dateFrom, date_to: dateTo, search, hospital_id: hospitalId },
+      report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId },
     },
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -99,6 +117,6 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     records: allRecords,
-    statistics: { total, male: males, female: females },
+    statistics: { total, male: males, female: females, byHospital: [...byHospital.values()] },
   })
 }

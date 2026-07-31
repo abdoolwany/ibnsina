@@ -57,12 +57,14 @@ export interface ChildVaccinationRecord {
   child_nationality: string
   father_first_name: string
   father_grandfather_name: string
+  father_great_grandfather_name: string | null
   father_national_id: string
   father_passport_number: string | null
   father_id_image_key: string
   mother_first_name: string
   mother_grandfather_name: string
-  mother_national_id: string
+  mother_great_grandfather_name: string | null
+  mother_national_id: string | null
   mother_passport_number: string | null
   mother_id_image_key: string
   vaccination_date: string

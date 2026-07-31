@@ -33,7 +33,7 @@ export default async function HospitalVerifierPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-2xl font-bold text-yellow-600">{pendingVerification.length}</div>
             <div className="text-sm text-gray-600">بانتظار التوثيق</div>
@@ -45,6 +45,10 @@ export default async function HospitalVerifierPage() {
           <div className="bg-white rounded-lg shadow p-4">
             <div className="text-2xl font-bold text-blue-600">{vaccinators.length}</div>
             <div className="text-sm text-gray-600">قائمة القائمين بالتطعيم</div>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="text-2xl font-bold text-indigo-600">{balances.reduce((s, b) => s + b.remaining_balance, 0)}</div>
+            <div className="text-sm text-gray-600">إجمالي الرصيد المتبقي</div>
           </div>
         </div>
 

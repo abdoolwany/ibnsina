@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { validateEgyptianNationalId, checkGenderConsistency } from "@/lib/validation/national-id"
-import type { BatchBalanceView, Vaccinator, ChildVaccinationRecord } from "@/types/database"
+import type { BatchBalanceView, Vaccinator, ChildVaccinationRecord, Gender } from "@/types/database"
 
 interface Props {
   hospitalId: string
@@ -20,23 +20,24 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [warnings, setWarnings] = useState<string[]>([])
 
   // بيانات الطفل
   const [childName, setChildName] = useState(record?.child_full_name ?? "")
-  const [childGender, setChildGender] = useState<"male" | "female">(record?.child_gender ?? "male")
+  const [childGender, setChildGender] = useState<Gender | "">(record?.child_gender ?? "")
   const [birthDate, setBirthDate] = useState(record?.birth_date ?? "")
   const [nationality, setNationality] = useState(record?.child_nationality ?? "مصري")
 
   // بيانات الأب
   const [fatherFirstName, setFatherFirstName] = useState(record?.father_first_name ?? "")
   const [fatherGrandfather, setFatherGrandfather] = useState(record?.father_grandfather_name ?? "")
+  const [fatherGreatGrandfather, setFatherGreatGrandfather] = useState(record?.father_great_grandfather_name ?? "")
   const [fatherNationalId, setFatherNationalId] = useState(record?.father_national_id ?? "")
   const [fatherPassport, setFatherPassport] = useState(record?.father_passport_number ?? "")
 
   // بيانات الأم
   const [motherFirstName, setMotherFirstName] = useState(record?.mother_first_name ?? "")
   const [motherGrandfather, setMotherGrandfather] = useState(record?.mother_grandfather_name ?? "")
+  const [motherGreatGrandfather, setMotherGreatGrandfather] = useState(record?.mother_great_grandfather_name ?? "")
   const [motherNationalId, setMotherNationalId] = useState(record?.mother_national_id ?? "")
   const [motherPassport, setMotherPassport] = useState(record?.mother_passport_number ?? "")
 
@@ -45,35 +46,27 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   const [vaccinatorId, setVaccinatorId] = useState(record?.vaccinator_id ?? "")
   const [vaccinationDate, setVaccinationDate] = useState(record?.vaccination_date ?? "")
 
-  // التحقق من الرقم القومي (client-side)
-  const validateNationalIdField = useCallback((id: string, field: "father" | "mother"): string | null => {
-    if (!id) return null
-    const result = validateEgyptianNationalId(id)
-    if (!result.isValid) return result.errors[0]
-    return null
-  }, [])
-
-  function checkFatherNationalId() {
-    const w = checkGenderConsistency(fatherNationalId, "male", "الأب")
-    setWarnings(prev => {
-      const filtered = prev.filter(p => !p.includes("الأب"))
-      return [...filtered, ...w]
-    })
-  }
-
-  function checkMotherNationalId() {
-    const w = checkGenderConsistency(motherNationalId, "female", "الأم")
-    setWarnings(prev => {
-      const filtered = prev.filter(p => !p.includes("الأم"))
-      return [...filtered, ...w]
-    })
-  }
+  // التحقق الفوري من الرقم القومي (client-side)
+  const fatherIdResult = fatherNationalId ? validateEgyptianNationalId(fatherNationalId) : null
+  const motherIdResult = motherNationalId ? validateEgyptianNationalId(motherNationalId) : null
+  const fatherIdError = fatherIdResult && !fatherIdResult.isValid ? fatherIdResult.errors[0] : null
+  const motherIdError = motherIdResult && !motherIdResult.isValid ? motherIdResult.errors[0] : null
+  const fatherGenderWarning = fatherNationalId.length === 14 ? checkGenderConsistency(fatherNationalId, "male", "الأب")[0] ?? null : null
+  const motherGenderWarning = motherNationalId.length === 14 ? checkGenderConsistency(motherNationalId, "female", "الأم")[0] ?? null : null
+  const motherIdOrPassportError = !motherNationalId.trim() && !motherPassport.trim()
+    ? "يجب إدخال الرقم القومي للأم أو رقم جواز السفر (أحدهما على الأقل)"
+    : null
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError("")
-    setWarnings([])
     setLoading(true)
+
+    if (!childGender) {
+      setError("يجب اختيار نوع الطفل (ذكر/أنثى).")
+      setLoading(false)
+      return
+    }
 
     // عند التعديل: نفس الدفعة لا تستهلك جرعة جديدة، لذا لا نمنع إعادة الحفظ
     const isSameBatch = record != null && record.batch_id === batchId
@@ -109,11 +102,19 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       return
     }
 
-    const motherNationVal = validateEgyptianNationalId(motherNationalId)
-    if (!motherNationVal.isValid) {
-      setError(`الرقم القومي للأم غير صحيح: ${motherNationVal.errors[0]}`)
+    if (!motherNationalId.trim() && !motherPassport.trim()) {
+      setError("يجب إدخال الرقم القومي للأم أو رقم جواز السفر (أحدهما على الأقل).")
       setLoading(false)
       return
+    }
+
+    if (motherNationalId) {
+      const motherNationVal = validateEgyptianNationalId(motherNationalId)
+      if (!motherNationVal.isValid) {
+        setError(`الرقم القومي للأم غير صحيح: ${motherNationVal.errors[0]}`)
+        setLoading(false)
+        return
+      }
     }
 
     const payload = {
@@ -123,11 +124,13 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       child_nationality: nationality,
       father_first_name: fatherFirstName,
       father_grandfather_name: fatherGrandfather,
+      father_great_grandfather_name: fatherGreatGrandfather || null,
       father_national_id: fatherNationalId,
       father_passport_number: fatherPassport || null,
       mother_first_name: motherFirstName,
       mother_grandfather_name: motherGrandfather,
-      mother_national_id: motherNationalId,
+      mother_great_grandfather_name: motherGreatGrandfather || null,
+      mother_national_id: motherNationalId || null,
       mother_passport_number: motherPassport || null,
       vaccination_date: vaccinationDate,
       batch_id: batchId,
@@ -163,8 +166,9 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">النوع</label>
-            <select value={childGender} onChange={e => setChildGender(e.target.value as "male" | "female")}
+            <select required value={childGender} onChange={e => setChildGender(e.target.value as Gender | "")}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+              <option value="">اختر النوع...</option>
               <option value="male">ذكر</option>
               <option value="female">أنثى</option>
             </select>
@@ -197,17 +201,17 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">الرقم القومي
-              {fatherNationalId.length === 14 && (
-                <span className={`mr-2 text-xs ${validateEgyptianNationalId(fatherNationalId).isValid ? 'text-green-600' : 'text-red-600'}`}>
-                  {validateEgyptianNationalId(fatherNationalId).isValid ? '✓' : '✗'}
-                </span>
-              )}
-            </label>
+            <label className="block text-sm font-medium text-gray-700">جد الأب</label>
+            <input type="text" value={fatherGreatGrandfather} onChange={e => setFatherGreatGrandfather(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
             <input type="text" required maxLength={14} value={fatherNationalId}
               onChange={e => setFatherNationalId(e.target.value)}
-              onBlur={checkFatherNationalId}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            {fatherIdError && <p className="mt-1 text-xs text-red-600">{fatherIdError}</p>}
+            {fatherGenderWarning && <p className="mt-1 text-xs text-yellow-700">{fatherGenderWarning}</p>}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">رقم جواز السفر (اختياري)</label>
@@ -232,22 +236,23 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">الرقم القومي
-              {motherNationalId.length === 14 && (
-                <span className={`mr-2 text-xs ${validateEgyptianNationalId(motherNationalId).isValid ? 'text-green-600' : 'text-red-600'}`}>
-                  {validateEgyptianNationalId(motherNationalId).isValid ? '✓' : '✗'}
-                </span>
-              )}
-            </label>
-            <input type="text" required maxLength={14} value={motherNationalId}
-              onChange={e => setMotherNationalId(e.target.value)}
-              onBlur={checkMotherNationalId}
+            <label className="block text-sm font-medium text-gray-700">جد الأم</label>
+            <input type="text" value={motherGreatGrandfather} onChange={e => setMotherGreatGrandfather(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">رقم جواز السفر (اختياري)</label>
+            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+            <input type="text" maxLength={14} value={motherNationalId}
+              onChange={e => setMotherNationalId(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            {motherIdError && <p className="mt-1 text-xs text-red-600">{motherIdError}</p>}
+            {motherGenderWarning && <p className="mt-1 text-xs text-yellow-700">{motherGenderWarning}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">رقم جواز السفر</label>
             <input type="text" value={motherPassport} onChange={e => setMotherPassport(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            {motherIdOrPassportError && <p className="mt-1 text-xs text-red-600">{motherIdOrPassportError}</p>}
           </div>
         </div>
       </div>
@@ -286,11 +291,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
         </div>
       </div>
 
-      {/* التحذيرات والأخطاء */}
-      {warnings.length > 0 && warnings.map((w, i) => (
-        <div key={i} className="bg-yellow-50 p-3 text-sm text-yellow-800 rounded-lg">{w}</div>
-      ))}
-
+      {/* الأخطاء */}
       {error && (
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded-lg">{error}</div>
       )}

@@ -2,7 +2,7 @@ import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getChildrenByHospital } from '@/lib/db/children'
-import { getBatchesByHospital } from '@/lib/db/batches'
+import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
 import Link from 'next/link'
 
 export default async function MohAdminPage() {
@@ -15,9 +15,11 @@ export default async function MohAdminPage() {
     hospitals.map(async h => {
       const batches = await getBatchesByHospital(h.id)
       const children = await getChildrenByHospital(h.id)
+      const balances = await getBatchBalance(h.id)
       const totalDelivered = batches.reduce((s, b) => s + b.quantity, 0)
+      const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
       const verified = children.filter(c => c.is_verified).length
-      return { ...h, totalDelivered, childrenCount: children.length, verifiedCount: verified }
+      return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
     })
   )
 
@@ -26,8 +28,9 @@ export default async function MohAdminPage() {
       children: s.children + h.childrenCount,
       delivered: s.delivered + h.totalDelivered,
       verified: s.verified + h.verifiedCount,
+      remaining: s.remaining + h.remaining,
     }),
-    { children: 0, delivered: 0, verified: 0 }
+    { children: 0, delivered: 0, verified: 0, remaining: 0 }
   )
 
   return (
@@ -93,7 +96,7 @@ export default async function MohAdminPage() {
                   <td className="py-3 px-4">{h.totalDelivered}</td>
                   <td className="py-3 px-4">{h.childrenCount}</td>
                   <td className="py-3 px-4">{h.verifiedCount}</td>
-                  <td className="py-3 px-4">{h.totalDelivered - h.childrenCount}</td>
+                  <td className="py-3 px-4">{h.remaining}</td>
                 </tr>
               ))}
             </tbody>
