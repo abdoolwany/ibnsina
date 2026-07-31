@@ -1,8 +1,7 @@
 import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
-import { getBatchesByHospital } from '@/lib/db/batches'
-import { getChildrenByHospital } from '@/lib/db/children'
+import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
 import BatchForm from './BatchForm'
 import Link from 'next/link'
 
@@ -16,9 +15,11 @@ export default async function MohLevel1Page() {
   const hospitalData = await Promise.all(
     linkedHospitals.map(async h => {
       const batches = await getBatchesByHospital(h.id)
-      const children = await getChildrenByHospital(h.id)
-      const totalDelivered = batches.reduce((s, b) => s + b.quantity, 0)
-      return { ...h, batches, childrenCount: children.length, totalDelivered }
+      const balances = await getBatchBalance(h.id)
+      const totalDelivered = balances.reduce((s, b) => s + b.total_quantity, 0)
+      const used = balances.reduce((s, b) => s + b.used_quantity, 0)
+      const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
+      return { ...h, batches, totalDelivered, used, remaining }
     })
   )
 
@@ -36,8 +37,8 @@ export default async function MohLevel1Page() {
               <h3 className="font-semibold text-lg mb-2">{h.name}</h3>
               <div className="grid grid-cols-3 gap-2 text-sm mb-3">
                 <div><span className="text-gray-500">تم تسليمه:</span><span className="font-bold mr-1">{h.totalDelivered}</span></div>
-                <div><span className="text-gray-500">مستخدم:</span><span className="font-bold mr-1">{h.childrenCount}</span></div>
-                <div><span className="text-gray-500">المتبقي:</span><span className="font-bold mr-1">{h.totalDelivered - h.childrenCount}</span></div>
+                <div><span className="text-gray-500">مستخدم:</span><span className="font-bold mr-1">{h.used}</span></div>
+                <div><span className="text-gray-500">المتبقي:</span><span className="font-bold mr-1">{h.remaining}</span></div>
               </div>
             </div>
           ))}
@@ -45,7 +46,7 @@ export default async function MohLevel1Page() {
 
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold mb-4">إضافة دفعة شحن جديدة</h3>
-          <BatchForm hospitalIds={user.hospitalIds} userId={user.id} />
+          <BatchForm hospitals={linkedHospitals} />
         </div>
 
         {hospitalData.map(h => (

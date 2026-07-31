@@ -3,15 +3,14 @@
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import type { Hospital } from "@/types/database"
 
 export default function BatchForm({
-  hospitalIds,
-  userId,
+  hospitals,
 }: {
-  hospitalIds: string[]
-  userId: string
+  hospitals: Hospital[]
 }) {
-  const [hospitalId, setHospitalId] = useState(hospitalIds[0] ?? "")
+  const [hospitalId, setHospitalId] = useState(hospitals[0]?.id ?? "")
   const [batchNumber, setBatchNumber] = useState("")
   const [quantity, setQuantity] = useState("")
   const [deliveryDate, setDeliveryDate] = useState("")
@@ -36,7 +35,6 @@ export default function BatchForm({
         delivery_date: deliveryDate,
         expiry_date: expiryDate,
         notes: notes || null,
-        created_by: userId,
       } as never)
 
     if (insertError) {
@@ -64,8 +62,8 @@ export default function BatchForm({
             required
             className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
           >
-            {hospitalIds.map((id) => (
-              <option key={id} value={id}>{id}</option>
+            {hospitals.map((h) => (
+              <option key={h.id} value={h.id}>{h.name}</option>
             ))}
           </select>
         </div>
