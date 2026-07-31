@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
 import BatchForm from './BatchForm'
+import BatchListTable from './BatchListTable'
 import Link from 'next/link'
 
 export default async function MohLevel1Page() {
@@ -52,32 +53,7 @@ export default async function MohLevel1Page() {
         {hospitalData.map(h => (
           <div key={h.id} className="bg-white rounded-lg shadow p-4">
             <h3 className="text-lg font-semibold mb-2">{h.name} - الدفعات</h3>
-            {h.batches.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">لا توجد دفعات بعد</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b text-right">
-                      <th className="py-2 px-3">رقم التشغيلة</th>
-                      <th className="py-2 px-3">الكمية</th>
-                      <th className="py-2 px-3">تاريخ التسليم</th>
-                      <th className="py-2 px-3">تاريخ الصلاحية</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {h.batches.map(b => (
-                      <tr key={b.id} className="border-b hover:bg-gray-50">
-                        <td className="py-2 px-3">{b.batch_number}</td>
-                        <td className="py-2 px-3">{b.quantity}</td>
-                        <td className="py-2 px-3">{b.delivery_date}</td>
-                        <td className="py-2 px-3">{b.expiry_date}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <BatchListTable batches={h.batches} />
           </div>
         ))}
       </div>

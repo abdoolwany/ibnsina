@@ -5,6 +5,7 @@ import { getHospitalById } from '@/lib/db/hospitals'
 import { getVaccinatorsByHospital } from '@/lib/db/vaccinators'
 import { getBatchBalance } from '@/lib/db/batches'
 import VerifyList from './VerifyList'
+import BatchBalanceTable from './BatchBalanceTable'
 import Link from 'next/link'
 
 export default async function HospitalVerifierPage() {
@@ -54,32 +55,7 @@ export default async function HospitalVerifierPage() {
 
         <div className="bg-white rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold mb-4">الطعوم والدفعات المستلمة</h3>
-          {balances.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">لا توجد دفعات مستلمة بعد</p>
-          ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-right border-b text-gray-600">
-                  <th className="py-2">رقم التشغيلة</th>
-                  <th className="py-2">تاريخ الصلاحية</th>
-                  <th className="py-2">المُسلَّم</th>
-                  <th className="py-2">المستخدم</th>
-                  <th className="py-2">المتبقي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {balances.map(b => (
-                  <tr key={b.batch_id} className="border-b hover:bg-gray-50">
-                    <td className="py-2 font-medium">{b.batch_number}</td>
-                    <td className="py-2">{b.expiry_date}</td>
-                    <td className="py-2">{b.total_quantity}</td>
-                    <td className="py-2">{b.used_quantity}</td>
-                    <td className={`py-2 font-bold ${b.remaining_balance <= 0 ? 'text-red-600' : 'text-green-600'}`}>{b.remaining_balance}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <BatchBalanceTable balances={balances} />
         </div>
 
         <div className="bg-white rounded-lg shadow p-4">

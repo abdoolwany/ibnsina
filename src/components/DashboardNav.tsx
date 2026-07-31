@@ -41,8 +41,11 @@ export default function DashboardNav({ user }: { user: AuthUser }) {
               الرئيسية
             </Link>
           )}
-          <Link href="/reports" className={`text-sm ${pathname.startsWith('/reports') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+          <Link href="/reports" className={`text-sm ${pathname === '/reports' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
             التقارير
+          </Link>
+          <Link href="/reports/batches" className={`text-sm ${pathname.startsWith('/reports/batches') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+            حركة الطعوم
           </Link>
           <Link href="/account" className={`text-sm ${pathname.startsWith('/account') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
             حسابي
