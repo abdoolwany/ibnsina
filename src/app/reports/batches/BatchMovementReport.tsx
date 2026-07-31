@@ -24,7 +24,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [hospitalId, setHospitalId] = useState("")
-  const [includeExpired, setIncludeExpired] = useState(false)
+  const [includeEmptied, setIncludeEmptied] = useState(false)
   const [rows, setRows] = useState<BatchMovementRow[]>([])
   const [totals, setTotals] = useState<{ received: number; used: number; remaining: number } | null>(null)
   const [loading, setLoading] = useState(false)
@@ -33,7 +33,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
 
-  const runSearch = useCallback(async (showExpired: boolean) => {
+  const runSearch = useCallback(async (showEmptied: boolean) => {
     setLoading(true)
     setError("")
 
@@ -41,7 +41,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
     if (hospitalId) params.set('hospital_id', hospitalId)
-    if (showExpired) params.set('include_expired', 'true')
+    if (showEmptied) params.set('include_emptied', 'true')
 
     try {
       const res = await fetch(`/api/reports/batches?${params}`)
@@ -62,14 +62,14 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     setHasSearched(true)
-    runSearch(includeExpired)
+    runSearch(includeEmptied)
   }
 
-  // إعادة التحميل فورًا عند تبديل إظهار/إخفاء التشغيلات المنتهية
+  // إعادة التحميل فورًا عند تبديل إظهار/إخفاء التشغيلات التي فرغت من الطعوم
   useEffect(() => {
-    if (hasSearched) runSearch(includeExpired)
+    if (hasSearched) runSearch(includeEmptied)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeExpired])
+  }, [includeEmptied])
 
   return (
     <div className="space-y-6">
@@ -100,9 +100,9 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={includeExpired} onChange={e => setIncludeExpired(e.target.checked)}
+            <input type="checkbox" checked={includeEmptied} onChange={e => setIncludeEmptied(e.target.checked)}
               className="rounded border-gray-300" />
-            إظهار التشغيلات المنتهية الصلاحية
+            إظهار التشغيلات التي فرغت منها الطعوم
           </label>
           <button type="submit" disabled={loading}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">

@@ -4,16 +4,17 @@ import { useState } from "react"
 import type { BatchBalanceView } from "@/types/database"
 
 export default function BatchBalanceTable({ balances }: { balances: BatchBalanceView[] }) {
-  const [showExpired, setShowExpired] = useState(false)
+  const [showEmptied, setShowEmptied] = useState(false)
   const today = new Date().toISOString().slice(0, 10)
-  const visible = showExpired ? balances : balances.filter(b => b.expiry_date >= today)
+  // إخفاء التشغيلات التي فرغت منها الطعوم افتراضيًا، مع إمكانية إظهارها للمراجعة
+  const visible = showEmptied ? balances : balances.filter(b => b.remaining_balance > 0)
 
   return (
     <div>
       <label className="flex items-center gap-2 text-sm text-gray-700 mb-3">
-        <input type="checkbox" checked={showExpired} onChange={e => setShowExpired(e.target.checked)}
+        <input type="checkbox" checked={showEmptied} onChange={e => setShowEmptied(e.target.checked)}
           className="rounded border-gray-300" />
-        إظهار التشغيلات المنتهية الصلاحية
+        إظهار التشغيلات التي فرغت منها الطعوم
       </label>
       {visible.length === 0 ? (
         <p className="text-gray-500 text-center py-8">لا توجد دفعات مستلمة بعد</p>

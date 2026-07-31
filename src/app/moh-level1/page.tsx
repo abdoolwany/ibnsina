@@ -1,7 +1,7 @@
 import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
-import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
+import { getBatchBalance } from '@/lib/db/batches'
 import BatchForm from './BatchForm'
 import BatchListTable from './BatchListTable'
 import Link from 'next/link'
@@ -15,12 +15,11 @@ export default async function MohLevel1Page() {
 
   const hospitalData = await Promise.all(
     linkedHospitals.map(async h => {
-      const batches = await getBatchesByHospital(h.id)
       const balances = await getBatchBalance(h.id)
       const totalDelivered = balances.reduce((s, b) => s + b.total_quantity, 0)
       const used = balances.reduce((s, b) => s + b.used_quantity, 0)
       const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
-      return { ...h, batches, totalDelivered, used, remaining }
+      return { ...h, balances, totalDelivered, used, remaining }
     })
   )
 
@@ -53,7 +52,7 @@ export default async function MohLevel1Page() {
         {hospitalData.map(h => (
           <div key={h.id} className="bg-white rounded-lg shadow p-4">
             <h3 className="text-lg font-semibold mb-2">{h.name} - الدفعات</h3>
-            <BatchListTable batches={h.batches} />
+            <BatchListTable balances={h.balances} />
           </div>
         ))}
       </div>

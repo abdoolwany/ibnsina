@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const dateFrom = searchParams.get('date_from')
   const dateTo = searchParams.get('date_to')
   const hospitalId = searchParams.get('hospital_id')
-  const includeExpired = searchParams.get('include_expired') === 'true'
+  const includeEmptied = searchParams.get('include_emptied') === 'true'
 
   const profileResult = await (supabase.from('user_profiles').select('role').eq('id', user.id).single() as never) as { data: { role: string } | null }
   const role = profileResult.data?.role
@@ -23,8 +23,6 @@ export async function GET(request: Request) {
 
   const linksResult = await (supabase.from('user_hospital_links').select('hospital_id') as never) as { data: Array<{ hospital_id: string }> | null }
   const userHospitalIds = linksResult.data?.map(l => l.hospital_id) ?? []
-
-  const today = new Date().toISOString().slice(0, 10)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase
@@ -41,11 +39,6 @@ export async function GET(request: Request) {
 
   if (dateFrom) query = query.gte('delivery_date', dateFrom)
   if (dateTo) query = query.lte('delivery_date', dateTo)
-
-  // إخفاء التشغيلات المنتهية افتراضيًا مع إمكانية إظهارها
-  if (!includeExpired) {
-    query = query.gte('expiry_date', today)
-  }
 
   query = query.order('delivery_date', { ascending: false })
 
@@ -94,7 +87,10 @@ export async function GET(request: Request) {
     remaining: balanceMap.get(b.id) ?? 0,
   }))
 
-  const totals = rows.reduce(
+  // إخفاء التشغيلات التي فرغت منها الطعوم افتراضيًا مع إمكانية إظهارها
+  const visibleRows = includeEmptied ? rows : rows.filter(r => r.remaining > 0)
+
+  const totals = visibleRows.reduce(
     (s, r) => ({ received: s.received + r.received, used: s.used + r.used, remaining: s.remaining + r.remaining }),
     { received: 0, used: 0, remaining: 0 }
   )
@@ -106,10 +102,10 @@ export async function GET(request: Request) {
     record_id: '00000000-0000-0000-0000-000000000000',
     action: 'insert',
     performed_by: user.id,
-    new_value: { report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId, include_expired: includeExpired } },
+    new_value: { report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId, include_emptied: includeEmptied } },
   } as any))
 
-  return NextResponse.json({ rows, totals })
+  return NextResponse.json({ rows: visibleRows, totals })
 }
 
 interface BatchRow {

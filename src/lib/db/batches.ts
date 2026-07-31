@@ -23,13 +23,11 @@ export async function getBatchBalance(hospitalId: string): Promise<BatchBalanceV
 
 export async function getAvailableBatches(hospitalId: string): Promise<BatchBalanceView[]> {
   const supabase = await createServerSupabase()
-  const today = new Date().toISOString().slice(0, 10)
   const { data } = await supabase
     .from('batch_balance_view')
     .select('*')
     .eq('hospital_id', hospitalId)
     .gt('remaining_balance', 0)
-    .gte('expiry_date', today)
     .order('expiry_date')
   return (data ?? []) as BatchBalanceView[]
 }

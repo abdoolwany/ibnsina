@@ -98,6 +98,7 @@ export interface BatchBalanceView {
   total_quantity: number
   used_quantity: number
   remaining_balance: number
+  delivery_date: string
 }
 
 export interface Database {
