@@ -2,6 +2,13 @@
 
 import { useState, useRef } from "react"
 import type { UserRole, Hospital } from "@/types/database"
+import { downloadExcel } from "@/lib/reports/exportUtils"
+import {
+  ChildrenReportPdf,
+  ChildDetailPdf,
+  downloadPdf,
+  type ChildReportRow,
+} from "@/lib/reports/pdfDocuments"
 
 interface ChildRecord {
   id: string
@@ -13,9 +20,11 @@ interface ChildRecord {
   father_first_name: string
   father_grandfather_name: string
   father_national_id: string
+  father_passport_number: string | null
   mother_first_name: string
   mother_grandfather_name: string
   mother_national_id: string | null
+  mother_passport_number: string | null
   vaccination_date: string
   batch_id: string
   vaccinator_id: string
@@ -47,6 +56,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
   const [records, setRecords] = useState<ChildRecord[]>([])
   const [stats, setStats] = useState<{ total: number; male: number; female: number; byHospital: HospitalStat[] } | null>(null)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState<'' | 'excel' | 'pdf'>('')
   const [error, setError] = useState("")
   const printRef = useRef<HTMLDivElement>(null)
 
@@ -80,6 +90,110 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
 
   function handlePrint() {
     window.print()
+  }
+
+  // تحويل سجلات النتائج الحالية إلى صيغة التصدير الموحدة
+  function toExportRows(): ChildReportRow[] {
+    return records.map(r => ({
+      hospital_name: r.hospitals?.name,
+      child_full_name: r.child_full_name,
+      birth_date: r.birth_date,
+      child_gender: r.child_gender,
+      child_nationality: r.child_nationality,
+      father_name: formatFullName(r.father_first_name, r.father_grandfather_name),
+      father_national_id: r.father_national_id,
+      mother_name: formatFullName(r.mother_first_name, r.mother_grandfather_name),
+      mother_national_id: r.mother_national_id,
+      vaccination_date: r.vaccination_date,
+      vaccinator_name: r.vaccinators?.full_name ?? '',
+      batch_number: r.vaccine_batches?.batch_number ?? '',
+      batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
+    }))
+  }
+
+  // أعمدة Excel للتقرير الشامل — بنفس ترتيب الجدول المعروض
+  const excelColumns = [
+    ...(isMinistry ? [{ header: 'المستشفى', key: 'hospital_name', width: 20 }] : []),
+    { header: 'اسم الطفل', key: 'child_full_name', width: 20 },
+    { header: 'تاريخ الميلاد', key: 'birth_date', width: 14 },
+    { header: 'اسم الأب', key: 'father_name', width: 20 },
+    { header: 'رقم الأب القومي', key: 'father_national_id', width: 18 },
+    { header: 'اسم الأم', key: 'mother_name', width: 20 },
+    { header: 'رقم الأم القومي', key: 'mother_national_id', width: 18 },
+    { header: 'تاريخ التطعيم', key: 'vaccination_date', width: 14 },
+    { header: 'القائم بالتطعيم', key: 'vaccinator_name', width: 18 },
+    { header: 'رقم التشغيلة', key: 'batch_number', width: 14 },
+    { header: 'تاريخ الدفعة', key: 'batch_delivery_date', width: 14 },
+  ]
+
+  async function handleExportExcel() {
+    if (records.length === 0) return
+    setExporting('excel')
+    try {
+      downloadExcel(
+        `تقرير-الأطفال-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        'تقرير الأطفال',
+        excelColumns,
+        toExportRows()
+      )
+    } finally {
+      setExporting('')
+    }
+  }
+
+  async function handleExportPdf() {
+    if (records.length === 0) return
+    setExporting('pdf')
+    try {
+      await downloadPdf(
+        <ChildrenReportPdf
+          rows={toExportRows()}
+          isMinistry={isMinistry}
+          dateRange={reportDateRange}
+          hospitalName={reportHospitalName}
+          total={stats?.total ?? records.length}
+          male={stats?.male ?? 0}
+          female={stats?.female ?? 0}
+        />,
+        `تقرير-الأطفال-${new Date().toISOString().slice(0, 10)}.pdf`
+      )
+    } finally {
+      setExporting('')
+    }
+  }
+
+  async function handleExportChildPdf(r: ChildRecord) {
+    setExporting('pdf')
+    try {
+      await downloadPdf(
+        <ChildDetailPdf
+          record={{
+            child_full_name: r.child_full_name,
+            child_gender: r.child_gender,
+            child_nationality: r.child_nationality,
+            birth_date: r.birth_date,
+            father_first_name: r.father_first_name,
+            father_grandfather_name: r.father_grandfather_name,
+            father_national_id: r.father_national_id,
+            father_passport_number: r.father_passport_number,
+            mother_first_name: r.mother_first_name,
+            mother_grandfather_name: r.mother_grandfather_name,
+            mother_national_id: r.mother_national_id,
+            mother_passport_number: r.mother_passport_number,
+            vaccination_date: r.vaccination_date,
+            vaccinator_name: r.vaccinators?.full_name ?? '',
+            batch_number: r.vaccine_batches?.batch_number ?? '',
+            batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
+            batch_expiry_date: r.vaccine_batches?.expiry_date ?? '',
+            is_verified: r.is_verified,
+            hospital_name: r.hospitals?.name,
+          }}
+        />,
+        `سجل-${r.child_full_name}-${new Date().toISOString().slice(0, 10)}.pdf`
+      )
+    } finally {
+      setExporting('')
+    }
   }
 
   function formatFullName(firstName: string, grandfatherName: string): string {
@@ -191,8 +305,18 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
             {reportDateRange && <p className="mt-1 text-sm">{reportDateRange}</p>}
             <p className="mt-1 text-sm">المستشفى: {reportHospitalName}</p>
           </div>
-          <div className="p-4 border-b print:hidden">
+          <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2 print:hidden">
             <h3 className="font-semibold">نتائج البحث ({records.length})</h3>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
+                className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-800 disabled:opacity-50">
+                {exporting === 'excel' ? 'جاري التصدير...' : 'تنزيل Excel'}
+              </button>
+              <button type="button" onClick={handleExportPdf} disabled={exporting !== ''}
+                className="bg-red-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-800 disabled:opacity-50">
+                {exporting === 'pdf' ? 'جاري التصدير...' : 'تنزيل PDF'}
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -210,6 +334,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                   <th className="py-3 px-3">رقم التشغيلة</th>
                   <th className="py-3 px-3">تاريخ الدفعة</th>
                   {isMinistry && <th className="py-3 px-3 print:hidden">الحالة</th>}
+                  <th className="py-3 px-3 print:hidden">سجل فردي</th>
                 </tr>
               </thead>
               <tbody>
@@ -234,6 +359,12 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                         }
                       </td>
                     )}
+                    <td className="py-2 px-3 print:hidden">
+                      <button type="button" onClick={() => handleExportChildPdf(r)} disabled={exporting !== ''}
+                        className="text-blue-700 hover:text-blue-900 text-sm disabled:opacity-50">
+                        سجل فردي
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

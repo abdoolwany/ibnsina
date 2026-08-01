@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react"
 import type { UserRole, Hospital } from "@/types/database"
+import { downloadExcel } from "@/lib/reports/exportUtils"
+import { BatchesReportPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 
 interface BatchMovementRow {
   batch_id: string
@@ -29,6 +31,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const [totals, setTotals] = useState<{ received: number; used: number; remaining: number } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [exporting, setExporting] = useState<'' | 'excel' | 'pdf'>('')
   const [hasSearched, setHasSearched] = useState(false)
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
@@ -70,6 +73,57 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     if (hasSearched) runSearch(includeEmptied)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [includeEmptied])
+
+  const hospitalMap = Object.fromEntries(hospitals.map(h => [h.id, h.name]))
+  const selectedHospitalName = hospitalId ? hospitalMap[hospitalId] : null
+  const reportHospitalName = selectedHospitalName
+    ?? (userRole !== 'moh_admin' ? hospitals.map(h => h.name).join('، ') : 'كل المستشفيات')
+  const reportDateRange = dateFrom || dateTo ? `من ${dateFrom || '...'} إلى ${dateTo || '...'}` : ''
+
+  // أعمدة Excel بنفس ترتيب الجدول المعروض
+  const excelColumns = [
+    ...(isMinistry ? [{ header: 'المستشفى', key: 'hospital_name', width: 20 }] : []),
+    { header: 'رقم التشغيلة', key: 'batch_number', width: 16 },
+    { header: 'تاريخ الدخول', key: 'delivery_date', width: 14 },
+    { header: 'تاريخ الصلاحية', key: 'expiry_date', width: 14 },
+    { header: 'الوارد', key: 'received', width: 10 },
+    { header: 'المستخدم', key: 'used', width: 10 },
+    { header: 'المتبقي', key: 'remaining', width: 10 },
+  ]
+
+  function handleExportExcel() {
+    if (rows.length === 0) return
+    setExporting('excel')
+    try {
+      downloadExcel(
+        `حركة-الطعوم-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        'حركة الطعوم',
+        excelColumns,
+        rows
+      )
+    } finally {
+      setExporting('')
+    }
+  }
+
+  async function handleExportPdf() {
+    if (rows.length === 0) return
+    setExporting('pdf')
+    try {
+      await downloadPdf(
+        <BatchesReportPdf
+          rows={rows}
+          totals={totals}
+          isMinistry={isMinistry}
+          dateRange={reportDateRange}
+          hospitalName={reportHospitalName}
+        />,
+        `حركة-الطعوم-${new Date().toISOString().slice(0, 10)}.pdf`
+      )
+    } finally {
+      setExporting('')
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -121,11 +175,23 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
 
       {rows.length > 0 && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold">نتائج التقرير ({rows.length} تشغيلة)</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              المستخدم = عدد الأطفال المطعّمين من هذه التشغيلة خلال الفترة المحددة، المتبقي = الرصيد الحالي
-            </p>
+          <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="font-semibold">نتائج التقرير ({rows.length} تشغيلة)</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                المستخدم = عدد الأطفال المطعّمين من هذه التشغيلة خلال الفترة المحددة، المتبقي = الرصيد الحالي
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
+                className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-800 disabled:opacity-50">
+                {exporting === 'excel' ? 'جاري التصدير...' : 'تنزيل Excel'}
+              </button>
+              <button type="button" onClick={handleExportPdf} disabled={exporting !== ''}
+                className="bg-red-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-800 disabled:opacity-50">
+                {exporting === 'pdf' ? 'جاري التصدير...' : 'تنزيل PDF'}
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
