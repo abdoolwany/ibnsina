@@ -4,6 +4,7 @@ import { getChildrenByHospital } from '@/lib/db/children'
 import { getAvailableBatches, getBatchBalance } from '@/lib/db/batches'
 import { getActiveVaccinators } from '@/lib/db/vaccinators'
 import { getHospitalById } from '@/lib/db/hospitals'
+import DeleteChildButton from '@/components/DeleteChildButton'
 import Link from 'next/link'
 
 export default async function HospitalEntryPage() {
@@ -85,10 +86,13 @@ export default async function HospitalEntryPage() {
                       </td>
                       <td className="py-2 px-3">
                         {!child.is_verified && (
-                          <Link href={`/hospital-entry/${child.id}/edit`}
-                            className="btn-soft px-3 py-1">
-                            تعديل
-                          </Link>
+                          <div className="flex gap-2">
+                            <Link href={`/hospital-entry/${child.id}/edit`}
+                              className="btn-soft px-3 py-1">
+                              تعديل
+                            </Link>
+                            <DeleteChildButton childId={child.id} childName={child.child_full_name} />
+                          </div>
                         )}
                       </td>
                     </tr>

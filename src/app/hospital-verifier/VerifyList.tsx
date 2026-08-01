@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import DeleteChildButton from "@/components/DeleteChildButton"
 import type { ChildVaccinationRecord } from "@/types/database"
 
 export default function VerifyList({
@@ -68,6 +69,7 @@ export default function VerifyList({
                     className="btn-soft px-3 py-1">
                     تعديل
                   </Link>
+                  <DeleteChildButton childId={child.id} childName={child.child_full_name} />
                   <button
                     onClick={() => handleVerify(child.id)}
                     disabled={verifyingId === child.id}
