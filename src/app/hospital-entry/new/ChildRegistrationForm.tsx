@@ -33,6 +33,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   const [fatherGreatGrandfather, setFatherGreatGrandfather] = useState(record?.father_great_grandfather_name ?? "")
   const [fatherNationalId, setFatherNationalId] = useState(record?.father_national_id ?? "")
   const [fatherPassport, setFatherPassport] = useState(record?.father_passport_number ?? "")
+  const [fatherPhone, setFatherPhone] = useState(record?.father_phone_number ?? "")
 
   // بيانات الأم
   const [motherFirstName, setMotherFirstName] = useState(record?.mother_first_name ?? "")
@@ -40,6 +41,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   const [motherGreatGrandfather, setMotherGreatGrandfather] = useState(record?.mother_great_grandfather_name ?? "")
   const [motherNationalId, setMotherNationalId] = useState(record?.mother_national_id ?? "")
   const [motherPassport, setMotherPassport] = useState(record?.mother_passport_number ?? "")
+  const [motherPhone, setMotherPhone] = useState(record?.mother_phone_number ?? "")
 
   // بيانات التطعيم
   const [batchId, setBatchId] = useState(record?.batch_id ?? "")
@@ -127,11 +129,13 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       father_great_grandfather_name: fatherGreatGrandfather || null,
       father_national_id: fatherNationalId,
       father_passport_number: fatherPassport || null,
+      father_phone_number: fatherPhone || null,
       mother_first_name: motherFirstName,
       mother_grandfather_name: motherGrandfather,
       mother_great_grandfather_name: motherGreatGrandfather || null,
       mother_national_id: motherNationalId || null,
       mother_passport_number: motherPassport || null,
+      mother_phone_number: motherPhone || null,
       vaccination_date: vaccinationDate,
       batch_id: batchId,
       vaccinator_id: vaccinatorId,
@@ -218,6 +222,11 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
             <input type="text" value={fatherPassport} onChange={e => setFatherPassport(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">رقم التليفون (اختياري)</label>
+            <input type="tel" dir="ltr" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left" />
+          </div>
         </div>
       </div>
 
@@ -253,6 +262,11 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
             <input type="text" value={motherPassport} onChange={e => setMotherPassport(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
             {motherIdOrPassportError && <p className="mt-1 text-xs text-red-600">{motherIdOrPassportError}</p>}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">رقم التليفون (اختياري)</label>
+            <input type="tel" dir="ltr" value={motherPhone} onChange={e => setMotherPhone(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left" />
           </div>
         </div>
       </div>
