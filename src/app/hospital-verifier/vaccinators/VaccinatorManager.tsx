@@ -59,7 +59,7 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleAdd} className="bg-white rounded-lg shadow p-4 flex gap-3">
+      <form onSubmit={handleAdd} className="card p-4 flex gap-3">
         <input
           type="text"
           value={name}
@@ -71,7 +71,7 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
+          className="btn btn-primary"
         >
           {loading ? "..." : "إضافة"}
         </button>
@@ -81,7 +81,7 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>
       )}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b text-right">
@@ -103,8 +103,8 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
                   <td className="py-3 px-4">{v.full_name}</td>
                   <td className="py-3 px-4">
                     {v.is_active
-                      ? <span className="text-green-600">نشط</span>
-                      : <span className="text-red-600">موقوف</span>
+                      ? <span className="badge badge-success">نشط</span>
+                      : <span className="badge badge-danger">موقوف</span>
                     }
                   </td>
                   <td className="py-3 px-4">

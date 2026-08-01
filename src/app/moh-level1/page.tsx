@@ -33,7 +33,7 @@ export default async function MohLevel1Page() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {hospitalData.map(h => (
-            <div key={h.id} className="bg-white rounded-lg shadow p-4">
+            <div key={h.id} className="card p-4">
               <h3 className="font-semibold text-lg mb-2">{h.name}</h3>
               <div className="grid grid-cols-3 gap-2 text-sm mb-3">
                 <div><span className="text-gray-500">تم تسليمه:</span><span className="font-bold mr-1">{h.totalDelivered}</span></div>
@@ -44,13 +44,13 @@ export default async function MohLevel1Page() {
           ))}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="card p-4">
           <h3 className="text-lg font-semibold mb-4">إضافة دفعة شحن جديدة</h3>
           <BatchForm hospitals={linkedHospitals} />
         </div>
 
         {hospitalData.map(h => (
-          <div key={h.id} className="bg-white rounded-lg shadow p-4">
+          <div key={h.id} className="card p-4">
             <h3 className="text-lg font-semibold mb-2">{h.name} - الدفعات</h3>
             <BatchListTable balances={h.balances} />
           </div>

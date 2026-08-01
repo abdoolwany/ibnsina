@@ -15,7 +15,7 @@ export default async function DashboardShell({ children, allowedRoles }: Props) 
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50">
+    <div dir="rtl" className="min-h-screen bg-background">
       <DashboardNav user={user} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         {children}

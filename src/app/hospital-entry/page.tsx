@@ -27,21 +27,21 @@ export default async function HospitalEntryPage() {
             <h2 className="text-2xl font-bold">لوحة مدخل البيانات</h2>
             <p className="text-gray-600">{hospital?.name}</p>
           </div>
-          <Link href="/hospital-entry/new" className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+          <Link href="/hospital-entry/new" className="btn btn-primary">
             + تسجيل طفل جديد
           </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="text-2xl font-bold text-blue-600">{children.length}</div>
+          <div className="card p-4">
+            <div className="text-2xl font-bold text-primary">{children.length}</div>
             <div className="text-sm text-gray-600">إجمالي الأطفال المسجلين</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-yellow-600">{unverified.length}</div>
             <div className="text-sm text-gray-600">بانتظار التوثيق</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-green-600">
               {batches.reduce((sum, b) => sum + b.remaining_balance, 0)}
             </div>
@@ -49,7 +49,7 @@ export default async function HospitalEntryPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="card p-4">
           <h3 className="text-lg font-semibold mb-4">آخر السجلات</h3>
           {children.length === 0 ? (
             <p className="text-gray-500 text-center py-8">لا يوجد أطفال مسجلين بعد</p>
@@ -79,14 +79,14 @@ export default async function HospitalEntryPage() {
                       <td className="py-2 px-3">{batchMap[child.batch_id] ?? '-'}</td>
                       <td className="py-2 px-3">
                         {child.is_verified
-                          ? <span className="text-green-600">موثق</span>
-                          : <span className="text-yellow-600">بانتظار التوثيق</span>
+                          ? <span className="badge badge-success">موثق</span>
+                          : <span className="badge badge-warning">بانتظار التوثيق</span>
                         }
                       </td>
                       <td className="py-2 px-3">
                         {!child.is_verified && (
                           <Link href={`/hospital-entry/${child.id}/edit`}
-                            className="bg-blue-50 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-100">
+                            className="btn-soft px-3 py-1">
                             تعديل
                           </Link>
                         )}

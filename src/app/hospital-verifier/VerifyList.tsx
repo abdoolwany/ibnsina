@@ -65,13 +65,13 @@ export default function VerifyList({
               <td className="py-2 px-3">
                 <div className="flex gap-2">
                   <Link href={`/hospital-verifier/${child.id}/edit`}
-                    className="bg-blue-50 text-blue-700 px-3 py-1 rounded text-sm hover:bg-blue-100">
+                    className="btn-soft px-3 py-1">
                     تعديل
                   </Link>
                   <button
                     onClick={() => handleVerify(child.id)}
                     disabled={verifyingId === child.id}
-                    className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 disabled:opacity-50"
+                    className="btn btn-success px-3 py-1"
                   >
                     {verifyingId === child.id ? "جاري التوثيق..." : "توثيق"}
                   </button>

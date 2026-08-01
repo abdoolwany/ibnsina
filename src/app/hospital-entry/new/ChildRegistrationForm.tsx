@@ -160,7 +160,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* قسم بيانات الطفل */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="card p-6">
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات الطفل</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
@@ -191,7 +191,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       </div>
 
       {/* قسم بيانات الأب */}
-      <div className="bg-white rounded-lg shadow p-6 border-r-4 border-blue-400">
+      <div className="card p-6 border-r-4 border-primary">
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات الأب</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -231,7 +231,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       </div>
 
       {/* قسم بيانات الأم */}
-      <div className="bg-white rounded-lg shadow p-6 border-r-4 border-pink-400">
+      <div className="card p-6 border-r-4 border-pink-400">
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات الأم</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -272,7 +272,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       </div>
 
       {/* قسم التطعيم */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="card p-6">
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات التطعيم</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -312,11 +312,11 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
 
       <div className="flex gap-4">
         <button type="submit" disabled={loading}
-          className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50">
+          className="btn btn-primary">
           {loading ? "جاري الحفظ..." : isEditing ? "حفظ التعديلات" : "حفظ التسجيل"}
         </button>
         <button type="button" onClick={() => router.back()}
-          className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg font-medium hover:bg-gray-300">
+          className="btn btn-secondary">
           إلغاء
         </button>
       </div>

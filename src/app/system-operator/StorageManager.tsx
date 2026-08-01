@@ -169,24 +169,24 @@ export default function StorageManager() {
 
       {/* 1) مراقبة التخزين */}
       {storage && (
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="card p-4">
           <h3 className="font-semibold text-lg mb-3">استهلاك التخزين في قاعدة البيانات</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-teal-50 rounded-lg p-3">
               <div className="text-sm text-gray-500">إجمالي قاعدة البيانات</div>
               <div className="text-2xl font-bold">{storage.total_pretty}</div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-teal-50 rounded-lg p-3">
               <div className="text-sm text-gray-500">النسبة من حد الباقة (500 ميجا)</div>
               <div className="text-2xl font-bold">{usedPercent}%</div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-teal-50 rounded-lg p-3">
               <div className="text-sm text-gray-500">المتبقي تقريبًا</div>
               <div className="text-2xl font-bold">{((FREE_TIER_BYTES - storage.total_bytes) / (1024 * 1024)).toFixed(0)} ميجا</div>
             </div>
           </div>
           <div className="h-3 bg-gray-200 rounded-full overflow-hidden mb-4">
-            <div className={`h-full ${usedPercent > 80 ? 'bg-red-500' : 'bg-blue-600'}`} style={{ width: `${usedPercent}%` }} />
+            <div className={`h-full ${usedPercent > 80 ? 'bg-red-500' : 'bg-primary'}`} style={{ width: `${usedPercent}%` }} />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -212,7 +212,7 @@ export default function StorageManager() {
       )}
 
       {/* 2) حذف سجلات الأطفال بنطاق زمني */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="card p-4">
         <h3 className="font-semibold text-lg mb-1">حذف سجلات الأطفال بنطاق زمني</h3>
         <p className="text-xs text-gray-500 mb-3">يُحذف نهائيًا ما تم إدخاله في الفترة المحددة (على أساس تاريخ الإدخال) مع تسجيله في سجل التدقيق</p>
         <div className="flex flex-wrap items-end gap-3">
@@ -228,19 +228,19 @@ export default function StorageManager() {
           </div>
           <button disabled={busy || !childFrom || !childTo}
             onClick={() => previewDelete('children', childFrom, childTo)}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 disabled:opacity-50">
+            className="btn btn-secondary">
             معاينة العدد
           </button>
           <button disabled={busy || !childFrom || !childTo}
             onClick={() => doDelete('children', childFrom, childTo, 'سجلات الأطفال')}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 disabled:opacity-50">
+            className="btn btn-danger">
             حذف نهائي
           </button>
         </div>
       </div>
 
       {/* 3) حذف الدفعات بنطاق زمني */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="card p-4">
         <h3 className="font-semibold text-lg mb-1">حذف دفعات اللقاح بنطاق زمني</h3>
         <p className="text-xs text-gray-500 mb-3">يُحذف نهائيًا ما تمت إضافته في الفترة المحددة مع سجلات الأطفال المرتبطة بهذه الدفعات</p>
         <div className="flex flex-wrap items-end gap-3">
@@ -256,19 +256,19 @@ export default function StorageManager() {
           </div>
           <button disabled={busy || !batchFrom || !batchTo}
             onClick={() => previewDelete('batches', batchFrom, batchTo)}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 disabled:opacity-50">
+            className="btn btn-secondary">
             معاينة العدد
           </button>
           <button disabled={busy || !batchFrom || !batchTo}
             onClick={() => doDelete('batches', batchFrom, batchTo, 'الدفعات')}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 disabled:opacity-50">
+            className="btn btn-danger">
             حذف نهائي
           </button>
         </div>
       </div>
 
       {/* 4) التنظيف التلقائي */}
-      <div className="bg-white rounded-lg shadow p-4">
+      <div className="card p-4">
         <h3 className="font-semibold text-lg mb-3">التنظيف التلقائي</h3>
         <div className="space-y-3 max-w-lg">
           <label className="flex items-center gap-2 text-sm text-gray-700">
@@ -293,11 +293,11 @@ export default function StorageManager() {
           </p>
           <div className="flex gap-3">
             <button disabled={busy} onClick={saveSettings}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+              className="btn btn-primary">
               حفظ الإعدادات
             </button>
             <button disabled={busy} onClick={runCleanupNow}
-              className="bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-700 disabled:opacity-50">
+              className="btn btn-warning">
               تشغيل التنظيف الآن
             </button>
           </div>

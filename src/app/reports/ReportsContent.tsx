@@ -209,7 +209,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
   return (
     <div className="space-y-6">
       {/* Search form */}
-      <form onSubmit={handleSearch} className="bg-white rounded-lg shadow p-4">
+      <form onSubmit={handleSearch} className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">من تاريخ</label>
@@ -236,12 +236,12 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
         </div>
         <div className="flex gap-3">
           <button type="submit" disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+            className="btn btn-primary">
             {loading ? "جاري البحث..." : "بحث"}
           </button>
           {records.length > 0 && (
             <button type="button" onClick={handlePrint}
-              className="bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700">
+              className="btn btn-secondary">
               طباعة
             </button>
           )}
@@ -256,21 +256,21 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
       {stats && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+            <div className="card p-4 text-center">
+              <div className="text-2xl font-bold text-primary">{stats.total}</div>
               <div className="text-sm text-gray-600">الإجمالي</div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="card p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{stats.male}</div>
               <div className="text-sm text-gray-600">ذكور</div>
             </div>
-            <div className="bg-white rounded-lg shadow p-4 text-center">
+            <div className="card p-4 text-center">
               <div className="text-2xl font-bold text-pink-600">{stats.female}</div>
               <div className="text-sm text-gray-600">إناث</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="card p-4">
             <h4 className="font-semibold mb-3">التوزيع حسب المستشفى</h4>
             <table className="w-full text-sm">
               <thead>
@@ -298,7 +298,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
 
       {/* Results */}
       {records.length > 0 && (
-        <div ref={printRef} className="bg-white rounded-lg shadow overflow-hidden">
+        <div ref={printRef} className="card overflow-hidden">
           {/* ترويسة الطباعة فقط */}
           <div className="hidden print:block text-center mb-4 p-4">
             <h1 className="text-xl font-bold">تقرير الأطفال المتطعّمين</h1>
@@ -309,11 +309,11 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
             <h3 className="font-semibold">نتائج البحث ({records.length})</h3>
             <div className="flex gap-2">
               <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
-                className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-800 disabled:opacity-50">
+                className="btn btn-success">
                 {exporting === 'excel' ? 'جاري التصدير...' : 'تنزيل Excel'}
               </button>
               <button type="button" onClick={handleExportPdf} disabled={exporting !== ''}
-                className="bg-red-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-800 disabled:opacity-50">
+                className="btn btn-danger">
                 {exporting === 'pdf' ? 'جاري التصدير...' : 'تنزيل PDF'}
               </button>
             </div>
@@ -354,14 +354,14 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                     {isMinistry && (
                       <td className="py-2 px-3 print:hidden">
                         {r.is_verified
-                          ? <span className="text-green-600">موثق</span>
-                          : <span className="text-yellow-600">غير موثق</span>
+                          ? <span className="badge badge-success">موثق</span>
+                          : <span className="badge badge-warning">غير موثق</span>
                         }
                       </td>
                     )}
                     <td className="py-2 px-3 print:hidden">
                       <button type="button" onClick={() => handleExportChildPdf(r)} disabled={exporting !== ''}
-                        className="text-blue-700 hover:text-blue-900 text-sm disabled:opacity-50">
+                        className="text-primary hover:text-primary-dark text-sm disabled:opacity-50">
                         سجل فردي
                       </button>
                     </td>

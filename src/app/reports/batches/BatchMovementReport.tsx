@@ -127,7 +127,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
 
   return (
     <div className="space-y-6">
-      <form onSubmit={handleSearch} className="bg-white rounded-lg shadow p-4">
+      <form onSubmit={handleSearch} className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">من تاريخ (دخول التشغيلة)</label>
@@ -159,7 +159,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
             إظهار التشغيلات التي فرغت منها الطعوم
           </label>
           <button type="submit" disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+            className="btn btn-primary">
             {loading ? "جاري البحث..." : "عرض التقرير"}
           </button>
         </div>
@@ -174,7 +174,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
       )}
 
       {rows.length > 0 && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="card overflow-hidden">
           <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="font-semibold">نتائج التقرير ({rows.length} تشغيلة)</h3>
@@ -184,11 +184,11 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
-                className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-800 disabled:opacity-50">
+                className="btn btn-success">
                 {exporting === 'excel' ? 'جاري التصدير...' : 'تنزيل Excel'}
               </button>
               <button type="button" onClick={handleExportPdf} disabled={exporting !== ''}
-                className="bg-red-700 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-800 disabled:opacity-50">
+                className="btn btn-danger">
                 {exporting === 'pdf' ? 'جاري التصدير...' : 'تنزيل PDF'}
               </button>
             </div>

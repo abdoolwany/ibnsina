@@ -115,12 +115,12 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
 
   return (
     <div className="space-y-4">
-      <button onClick={() => setShowForm(!showForm)} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700">
+      <button onClick={() => setShowForm(!showForm)} className="btn btn-primary">
         {showForm ? 'إلغاء' : '+ إنشاء مستخدم جديد'}
       </button>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="bg-white rounded-lg shadow p-4 space-y-3 max-w-lg">
+        <form onSubmit={handleCreate} className="card p-4 space-y-3 max-w-lg">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700">الاسم الكامل</label>
@@ -161,13 +161,13 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
             </div>
           </div>
           {error && <div className="bg-red-50 p-2 text-sm text-red-700 rounded">{error}</div>}
-          <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">إنشاء المستخدم</button>
+          <button type="submit" className="btn btn-success">إنشاء المستخدم</button>
         </form>
       )}
 
       {error && <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b text-right">
@@ -187,7 +187,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                       placeholder="بدون @"
                       className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm" />
                   ) : (
-                    <span className="text-blue-700">{u.username ?? '-'}</span>
+                    <span className="text-primary">{u.username ?? '-'}</span>
                   )}
                 </td>
                 <td className="py-3 px-4">
@@ -205,8 +205,8 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                         placeholder="كلمة سر جديدة (اتركها فارغة لعدم التغيير)"
                         className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm" />
                       <div className="flex gap-2">
-                        <button onClick={() => handleSaveEdit(u)} className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">حفظ</button>
-                        <button onClick={() => setEditingId(null)} className="bg-gray-200 px-3 py-1 rounded text-xs hover:bg-gray-300">إلغاء</button>
+                        <button onClick={() => handleSaveEdit(u)} className="btn btn-success px-3 py-1 text-xs">حفظ</button>
+                        <button onClick={() => setEditingId(null)} className="btn btn-secondary px-3 py-1 text-xs">إلغاء</button>
                       </div>
                     </div>
                   ) : (
@@ -214,7 +214,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                   )}
                 </td>
                 <td className="py-3 px-4">
-                  <span className={`px-2 py-0.5 rounded text-xs ${u.role === 'moh_admin' ? 'bg-purple-100 text-purple-800' : u.role === 'system_operator' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                  <span className={`badge ${u.role === 'moh_admin' ? 'badge-purple' : u.role === 'system_operator' ? 'badge-danger' : 'badge-info'}`}>
                     {roleLabels[u.role] || u.role}
                   </span>
                 </td>
@@ -233,7 +233,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex gap-2">
-                    <button onClick={() => startEdit(u)} className="text-blue-600 hover:text-blue-800 text-sm">تعديل</button>
+                    <button onClick={() => startEdit(u)} className="text-primary hover:text-primary-dark text-sm">تعديل</button>
                     {u.id !== currentUserId && (
                       <button onClick={() => handleDelete(u)} className="text-red-600 hover:text-red-800 text-sm">حذف</button>
                     )}

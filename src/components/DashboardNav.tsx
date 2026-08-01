@@ -32,31 +32,31 @@ export default function DashboardNav({ user }: { user: AuthUser }) {
   }
 
   return (
-    <nav className="bg-white shadow-sm border-b no-print">
+    <nav className="bg-white shadow-sm border-b border-gray-100 no-print">
       <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href={roleDashboards[user.role ?? ''] ?? '/'} className="text-lg font-bold text-gray-900 hover:text-blue-700">
+          <Link href={roleDashboards[user.role ?? ''] ?? '/'} className="text-lg font-bold text-gray-900 hover:text-primary">
             نظام تتبع تطعيم كبدي B
           </Link>
           {pathname !== roleDashboards[user.role ?? ''] && (
-            <Link href={roleDashboards[user.role ?? ''] ?? '/'} className="text-sm text-blue-600 hover:text-blue-800">
+            <Link href={roleDashboards[user.role ?? ''] ?? '/'} className="text-sm text-primary hover:text-primary-dark">
               الرئيسية
             </Link>
           )}
           {user.role !== 'system_operator' && (
             <>
-              <Link href="/reports" className={`text-sm ${pathname === '/reports' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+              <Link href="/reports" className={`text-sm ${pathname === '/reports' ? 'text-primary-dark font-semibold' : 'text-primary hover:text-primary-dark'}`}>
                 التقارير
               </Link>
-              <Link href="/reports/batches" className={`text-sm ${pathname.startsWith('/reports/batches') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+              <Link href="/reports/batches" className={`text-sm ${pathname.startsWith('/reports/batches') ? 'text-primary-dark font-semibold' : 'text-primary hover:text-primary-dark'}`}>
                 حركة الطعوم
               </Link>
             </>
           )}
-          <Link href="/account" className={`text-sm ${pathname.startsWith('/account') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}>
+          <Link href="/account" className={`text-sm ${pathname.startsWith('/account') ? 'text-primary-dark font-semibold' : 'text-primary hover:text-primary-dark'}`}>
             حسابي
           </Link>
-          <span className="text-sm bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+          <span className="badge badge-info">
             {roleLabels[user.role ?? ''] ?? user.role}
           </span>
         </div>

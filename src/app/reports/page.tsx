@@ -21,7 +21,7 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-gray-50">
+    <div dir="rtl" className="min-h-screen bg-background">
       <DashboardNav user={user} />
       <main className="max-w-7xl mx-auto px-4 py-6">
         <div className="mb-6">

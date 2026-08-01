@@ -48,19 +48,19 @@ export default function HospitalManager({ hospitals: initial }: { hospitals: Hos
 
   return (
     <div className="space-y-4">
-      <form onSubmit={handleAdd} className="bg-white rounded-lg shadow p-4 flex gap-3 max-w-lg">
+      <form onSubmit={handleAdd} className="card p-4 flex gap-3 max-w-lg">
         <input type="text" value={name} onChange={e => setName(e.target.value)}
           placeholder="اسم المستشفى الجديد..." required
           className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
         <button type="submit" disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+          className="btn btn-primary">
           {loading ? '...' : 'إضافة'}
         </button>
       </form>
 
       {error && <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>}
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-gray-50 border-b text-right">

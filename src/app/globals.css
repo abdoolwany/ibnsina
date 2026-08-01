@@ -1,14 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: 'Noto Sans Arabic', system-ui, sans-serif;
+  /* أزرق-تركوازي طبي — اللون الأساسي للنظام */
+  --color-primary: #0d9488;
+  --color-primary-dark: #0f766e;
+  --color-primary-light: #5eead4;
+  --font-sans: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
   --font-mono: 'Courier New', monospace;
 }
 
@@ -18,9 +22,77 @@ body {
   font-family: var(--font-sans);
 }
 
+@layer base {
+  /* تظليل متبادل خفيف بين صفوف الجداول + تأثير hover موحّد في كل النظام */
+  table tbody tr:nth-child(odd) {
+    background-color: #f0fdfa;
+  }
+  table tbody tr:hover {
+    background-color: #e0f2f1;
+  }
+}
+
+@layer components {
+  /* بطاقة موحّدة: خلفية بيضاء، ظل خفيف، حواف دائرية كبيرة */
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100;
+  }
+
+  /* الأساس الموحّد لكل الأزرار */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-primary text-white hover:bg-primary-dark shadow-sm;
+  }
+  .btn-secondary {
+    @apply bg-gray-600 text-white hover:bg-gray-700 shadow-sm;
+  }
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700 shadow-sm;
+  }
+  .btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700 shadow-sm;
+  }
+  .btn-warning {
+    @apply bg-amber-500 text-white hover:bg-amber-600 shadow-sm;
+  }
+  /* زر ناعم (خلفية فاتحة) للروابط والإجراءات الثانوية */
+  .btn-soft {
+    @apply bg-teal-50 text-teal-700 hover:bg-teal-100 rounded-lg text-sm font-medium transition-colors;
+  }
+
+  /* شارات الحالة: خلفية فاتحة من لون الحالة ونص غامق من نفس اللون */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap;
+  }
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+  .badge-warning {
+    @apply bg-amber-100 text-amber-800;
+  }
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+  .badge-info {
+    @apply bg-teal-100 text-teal-800;
+  }
+  .badge-purple {
+    @apply bg-purple-100 text-purple-800;
+  }
+  .badge-gray {
+    @apply bg-gray-100 text-gray-700;
+  }
+}
+
 @media print {
   body {
     background: white;
     color: black;
+  }
+  table tbody tr:nth-child(odd),
+  table tbody tr:hover {
+    background-color: transparent;
   }
 }

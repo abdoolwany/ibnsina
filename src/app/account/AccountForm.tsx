@@ -64,7 +64,7 @@ export default function AccountForm({ email, fullName }: { email: string; fullNa
   }
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-4">
+    <form onSubmit={handleSubmit} className="card p-6 space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700">الاسم</label>
         <input type="text" value={fullName} disabled
@@ -93,7 +93,7 @@ export default function AccountForm({ email, fullName }: { email: string; fullNa
       {success && <div className="bg-green-50 p-3 text-sm text-green-700 rounded">{success}</div>}
 
       <button type="submit" disabled={loading}
-        className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white font-medium hover:bg-blue-700 disabled:opacity-50">
+        className="btn btn-primary w-full">
         {loading ? 'جاري الحفظ...' : 'تغيير كلمة المرور'}
       </button>
     </form>
