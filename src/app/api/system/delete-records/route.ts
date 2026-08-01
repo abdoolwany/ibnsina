@@ -63,6 +63,8 @@ export async function POST(request: Request) {
     if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
 
     await writeAuditEntries(admin, 'child_vaccination_records', rows, user.id)
+    // أرشفة الجرعات المستهلكة حتى لا تعود إلى الرصيد بعد الحذف
+    await writeArchiveEntries(admin, rows, user.id)
 
     const vacuum = await runVacuum(['child_vaccination_records'])
     return NextResponse.json({
@@ -159,6 +161,19 @@ async function writeAuditEntries(admin: any, tableName: string, rows: any[], per
     old_value: r,
   }))
   await admin.from('audit_log').insert(entries)
+}
+
+// أرشفة الجرعات المستهلكة: يحفظ الجدول الدفعة والمستشفى فقط (بدون بيانات هوية)
+// حتى تظل الجرعة محسوبة كمستهلكة ولا تعود إلى رصيد الدفعة بعد حذف السجل
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function writeArchiveEntries(admin: any, rows: any[], performedBy: string) {
+  const entries = rows.map((r) => ({
+    original_record_id: r.id,
+    batch_id: r.batch_id,
+    hospital_id: r.hospital_id,
+    deleted_by: performedBy,
+  }))
+  await admin.from('deleted_child_vaccination_records').insert(entries)
 }
 
 interface VacuumResult {

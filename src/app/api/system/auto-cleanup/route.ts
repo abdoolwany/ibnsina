@@ -71,6 +71,15 @@ export async function GET(request: Request) {
         old_value: r,
       }))
     )
+    // أرشفة الجرعات المستهلكة حتى لا تعود إلى الرصيد بعد الحذف
+    await admin.from('deleted_child_vaccination_records').insert(
+      rows.map((r) => ({
+        original_record_id: r.id,
+        batch_id: r.batch_id,
+        hospital_id: r.hospital_id,
+        deleted_by: performedBy,
+      }))
+    )
   }
 
   // استعادة المساحة (اختياري: يعمل فقط مع DATABASE_URL)

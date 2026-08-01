@@ -90,6 +90,15 @@ export interface AuditLog {
   new_value: Record<string, unknown> | null
 }
 
+export interface DeletedChildVaccinationRecord {
+  id: string
+  original_record_id: string
+  batch_id: string
+  hospital_id: string
+  deleted_at: string
+  deleted_by: string | null
+}
+
 export interface BatchBalanceView {
   batch_id: string
   hospital_id: string
@@ -142,6 +151,11 @@ export interface Database {
       audit_log: {
         Row: AuditLog
         Insert: Omit<AuditLog, 'id' | 'performed_at'>
+        Update: Record<string, never>
+      }
+      deleted_child_vaccination_records: {
+        Row: DeletedChildVaccinationRecord
+        Insert: Omit<DeletedChildVaccinationRecord, 'id' | 'deleted_at'>
         Update: Record<string, never>
       }
     }
