@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import type { BatchBalanceView } from "@/types/database"
+import { cairoToday } from "@/lib/time"
 
 export default function BatchBalanceTable({ balances }: { balances: BatchBalanceView[] }) {
   const [showEmptied, setShowEmptied] = useState(false)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = cairoToday()
   // إخفاء التشغيلات التي فرغت منها الطعوم افتراضيًا، مع إمكانية إظهارها للمراجعة
   const visible = showEmptied ? balances : balances.filter(b => b.remaining_balance > 0)
 

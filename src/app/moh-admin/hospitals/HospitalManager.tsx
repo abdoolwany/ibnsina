@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { Hospital } from "@/types/database"
+import { formatCairoDateTime } from "@/lib/time"
 
 export default function HospitalManager({ hospitals: initial }: { hospitals: Hospital[] }) {
   const [hospitals, setHospitals] = useState(initial)
@@ -76,7 +77,7 @@ export default function HospitalManager({ hospitals: initial }: { hospitals: Hos
               hospitals.map(h => (
                 <tr key={h.id} className="border-b hover:bg-gray-50">
                   <td className="py-3 px-4">{h.name}</td>
-                  <td className="py-3 px-4 text-gray-500">{new Date(h.created_at).toLocaleDateString('ar-EG')}</td>
+                  <td className="py-3 px-4 text-gray-500">{formatCairoDateTime(h.created_at)}</td>
                   <td className="py-3 px-4">
                     <button onClick={() => handleDelete(h.id)}
                       className="text-red-600 hover:text-red-800 text-sm">حذف</button>

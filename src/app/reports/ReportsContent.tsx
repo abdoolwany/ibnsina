@@ -9,6 +9,7 @@ import {
   downloadPdf,
   type ChildReportRow,
 } from "@/lib/reports/pdfDocuments"
+import { cairoToday } from "@/lib/time"
 
 interface ChildRecord {
   id: string
@@ -133,7 +134,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     setExporting('excel')
     try {
       downloadExcel(
-        `تقرير-الأطفال-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        `تقرير-الأطفال-${cairoToday()}.xlsx`,
         'تقرير الأطفال',
         excelColumns,
         toExportRows()
@@ -157,7 +158,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
           male={stats?.male ?? 0}
           female={stats?.female ?? 0}
         />,
-        `تقرير-الأطفال-${new Date().toISOString().slice(0, 10)}.pdf`
+        `تقرير-الأطفال-${cairoToday()}.pdf`
       )
     } finally {
       setExporting('')

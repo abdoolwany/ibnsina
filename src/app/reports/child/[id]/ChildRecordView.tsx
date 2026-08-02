@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
-import { formatCairoDateTime } from "@/lib/time"
+import { formatCairoDateTime, cairoToday } from "@/lib/time"
 
 // بيانات السجل مع الروابط الداخلية القادمة من الخادم
 interface ChildRecordViewData {
@@ -84,7 +84,7 @@ export default function ChildRecordView({ record }: { record: ChildRecordViewDat
             verified_at: record.verified_at,
           }}
         />,
-        `سجل-${record.child_full_name}-${new Date().toISOString().slice(0, 10)}.pdf`
+        `سجل-${record.child_full_name}-${cairoToday()}.pdf`
       )
     } finally {
       setExporting(false)

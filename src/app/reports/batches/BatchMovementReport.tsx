@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import type { UserRole, Hospital } from "@/types/database"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import { BatchesReportPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
+import { cairoToday } from "@/lib/time"
 
 interface BatchMovementRow {
   batch_id: string
@@ -96,7 +97,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     setExporting('excel')
     try {
       downloadExcel(
-        `حركة-الطعوم-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        `حركة-الطعوم-${cairoToday()}.xlsx`,
         'حركة الطعوم',
         excelColumns,
         rows
@@ -118,7 +119,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
           dateRange={reportDateRange}
           hospitalName={reportHospitalName}
         />,
-        `حركة-الطعوم-${new Date().toISOString().slice(0, 10)}.pdf`
+        `حركة-الطعوم-${cairoToday()}.pdf`
       )
     } finally {
       setExporting('')
@@ -212,7 +213,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
                     {isMinistry && <td className="py-2 px-3">{r.hospital_name}</td>}
                     <td className="py-2 px-3 font-medium">{r.batch_number}</td>
                     <td className="py-2 px-3">{r.delivery_date}</td>
-                    <td className={`py-2 px-3 ${r.expiry_date < new Date().toISOString().slice(0, 10) ? 'text-red-600' : ''}`}>{r.expiry_date}</td>
+                    <td className={`py-2 px-3 ${r.expiry_date < cairoToday() ? 'text-red-600' : ''}`}>{r.expiry_date}</td>
                     <td className="py-2 px-3">{r.received}</td>
                     <td className="py-2 px-3">{r.used}</td>
                     <td className={`py-2 px-3 font-bold ${r.remaining <= 0 ? 'text-red-600' : 'text-green-600'}`}>{r.remaining}</td>

@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { cairoToday } from "@/lib/time"
 import type { BatchBalanceView } from "@/types/database"
 
 export default function BatchListTable({ balances }: { balances: BatchBalanceView[] }) {
@@ -70,7 +71,7 @@ export default function BatchListTable({ balances }: { balances: BatchBalanceVie
                   <td className="py-2 px-3">{b.batch_number}</td>
                   <td className="py-2 px-3">{b.total_quantity}</td>
                   <td className="py-2 px-3">{b.delivery_date}</td>
-                  <td className={`py-2 px-3 ${b.expiry_date < new Date().toISOString().slice(0, 10) ? 'text-red-600' : ''}`}>{b.expiry_date}</td>
+                  <td className={`py-2 px-3 ${b.expiry_date < cairoToday() ? 'text-red-600' : ''}`}>{b.expiry_date}</td>
                   <td className="py-2 px-3">{b.used_quantity}</td>
                   <td className={`py-2 px-3 font-bold ${b.remaining_balance <= 0 ? 'text-red-600' : 'text-green-600'}`}>{b.remaining_balance}</td>
                   <td className="py-2 px-3">
