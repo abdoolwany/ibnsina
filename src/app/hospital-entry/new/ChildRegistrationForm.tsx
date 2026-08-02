@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { validateEgyptianNationalId, checkGenderConsistency } from "@/lib/validation/national-id"
+import { cairoToday } from "@/lib/time"
 import type { BatchBalanceView, Vaccinator, ChildVaccinationRecord, Gender } from "@/types/database"
 
 interface Props {
@@ -73,6 +74,29 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
     // عند التعديل: نفس الدفعة لا تستهلك جرعة جديدة، لذا لا نمنع إعادة الحفظ
     const isSameBatch = record != null && record.batch_id === batchId
     const selectedBatch = batches.find(b => b.batch_id === batchId)
+
+    // منع التواريخ غير المنطقية (تاريخ اليوم بتوقيت القاهرة)
+    const today = cairoToday()
+    if (birthDate > today) {
+      setError(`تاريخ ميلاد الطفل (${birthDate}) لا يمكن أن يكون بعد اليوم (${today}).`)
+      setLoading(false)
+      return
+    }
+    if (vaccinationDate > today) {
+      setError(`تاريخ التطعيم (${vaccinationDate}) لا يمكن أن يكون بعد اليوم (${today}).`)
+      setLoading(false)
+      return
+    }
+    if (vaccinationDate < birthDate) {
+      setError(`تاريخ التطعيم (${vaccinationDate}) لا يمكن أن يسبق تاريخ ميلاد الطفل (${birthDate}).`)
+      setLoading(false)
+      return
+    }
+    if (selectedBatch && vaccinationDate < selectedBatch.delivery_date) {
+      setError(`تاريخ التطعيم (${vaccinationDate}) لا يمكن أن يسبق تاريخ دخول الدفعة (${selectedBatch.delivery_date}).`)
+      setLoading(false)
+      return
+    }
 
     if (selectedBatch && selectedBatch.remaining_balance <= 0 && !isSameBatch) {
       setError(`الرصيد المتبقي لهذه الدفعة هو ${selectedBatch.remaining_balance}. لا يمكن التسجيل.`)

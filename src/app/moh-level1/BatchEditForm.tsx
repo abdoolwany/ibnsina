@@ -4,19 +4,14 @@ import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { cairoToday } from "@/lib/time"
-import type { Hospital } from "@/types/database"
+import type { VaccineBatch } from "@/types/database"
 
-export default function BatchForm({
-  hospitals,
-}: {
-  hospitals: Hospital[]
-}) {
-  const [hospitalId, setHospitalId] = useState(hospitals[0]?.id ?? "")
-  const [batchNumber, setBatchNumber] = useState("")
-  const [quantity, setQuantity] = useState("")
-  const [deliveryDate, setDeliveryDate] = useState("")
-  const [expiryDate, setExpiryDate] = useState("")
-  const [notes, setNotes] = useState("")
+export default function BatchEditForm({ batch }: { batch: VaccineBatch }) {
+  const [batchNumber, setBatchNumber] = useState(batch.batch_number)
+  const [quantity, setQuantity] = useState(String(batch.quantity))
+  const [deliveryDate, setDeliveryDate] = useState(batch.delivery_date)
+  const [expiryDate, setExpiryDate] = useState(batch.expiry_date)
+  const [notes, setNotes] = useState(batch.notes ?? "")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -38,25 +33,21 @@ export default function BatchForm({
 
     setLoading(true)
 
-    const { error: insertError } = await supabase
+    const { error: updateError } = await supabase
       .from('vaccine_batches')
-      .insert({
-        hospital_id: hospitalId,
+      .update({
         batch_number: batchNumber,
         quantity: parseInt(quantity, 10),
         delivery_date: deliveryDate,
         expiry_date: expiryDate,
         notes: notes || null,
       } as never)
+      .eq('id', batch.id)
 
-    if (insertError) {
-      setError(insertError.message)
+    if (updateError) {
+      setError(updateError.message)
     } else {
-      setBatchNumber("")
-      setQuantity("")
-      setDeliveryDate("")
-      setExpiryDate("")
-      setNotes("")
+      router.push('/moh-level1')
       router.refresh()
     }
 
@@ -66,19 +57,6 @@ export default function BatchForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4 max-w-lg">
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">المستشفى</label>
-          <select
-            value={hospitalId}
-            onChange={(e) => setHospitalId(e.target.value)}
-            required
-            className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-          >
-            {hospitals.map((h) => (
-              <option key={h.id} value={h.id}>{h.name}</option>
-            ))}
-          </select>
-        </div>
         <div>
           <label className="block text-sm font-medium text-gray-700">رقم التشغيلة</label>
           <input
@@ -135,13 +113,14 @@ export default function BatchForm({
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="btn btn-primary"
-      >
-        {loading ? "جاري الحفظ..." : "إضافة الدفعة"}
-      </button>
+      <div className="flex gap-3">
+        <button type="submit" disabled={loading} className="btn btn-primary">
+          {loading ? "جاري الحفظ..." : "حفظ التعديلات"}
+        </button>
+        <button type="button" onClick={() => router.push('/moh-level1')} className="btn btn-secondary">
+          إلغاء
+        </button>
+      </div>
     </form>
   )
 }

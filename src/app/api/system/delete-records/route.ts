@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSystemPgClient } from '@/lib/db/pool'
+import { cairoDayStartUtc, cairoDayEndExclusiveUtc } from '@/lib/time'
 
 // POST /api/system/delete-records
 // حذف فعلي نهائي لبيانات الإدخال حسب نطاق زمني (created_at)
@@ -28,11 +29,9 @@ export async function POST(request: Request) {
 
   const admin = await createServiceRoleClient()
 
-  // نطاق زمني UTC يشمل اليوم الأخير كاملًا
-  const fromTS = `${dateFrom}T00:00:00Z`
-  const toEnd = new Date(`${dateTo}T00:00:00Z`)
-  toEnd.setDate(toEnd.getDate() + 1)
-  const toEndTS = toEnd.toISOString()
+  // نطاق زمني بتوقيت القاهرة (بداية اليوم ونهايته = 12 منتصف الليل)
+  const fromTS = cairoDayStartUtc(dateFrom)
+  const toEndTS = cairoDayEndExclusiveUtc(dateTo)
 
   if (type === 'children') {
     if (preview) {

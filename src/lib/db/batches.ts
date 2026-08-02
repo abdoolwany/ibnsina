@@ -21,6 +21,26 @@ export async function getBatchBalance(hospitalId: string): Promise<BatchBalanceV
   return (data ?? []) as BatchBalanceView[]
 }
 
+export async function getBatchById(batchId: string): Promise<VaccineBatch | null> {
+  const supabase = await createServerSupabase()
+  const { data } = await supabase
+    .from('vaccine_batches')
+    .select('*')
+    .eq('id', batchId)
+    .single()
+  return data as VaccineBatch | null
+}
+
+export async function getBatchBalanceById(batchId: string): Promise<BatchBalanceView | null> {
+  const supabase = await createServerSupabase()
+  const { data } = await supabase
+    .from('batch_balance_view')
+    .select('*')
+    .eq('batch_id', batchId)
+    .maybeSingle()
+  return data as BatchBalanceView | null
+}
+
 export async function getAvailableBatches(hospitalId: string): Promise<BatchBalanceView[]> {
   const supabase = await createServerSupabase()
   const { data } = await supabase

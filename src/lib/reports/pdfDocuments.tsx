@@ -11,19 +11,21 @@ import {
   Font,
   pdf,
 } from '@react-pdf/renderer'
+import { formatCairoDateTime } from '@/lib/time'
 
-// خط عربي يدعم التشكيل والاتصال (Amiri) — ملفاته من /public ليُحملها المتصفح وقت التصدير
+// خط عربي نظيف (Tajawal) — ملفاته من /public ليُحملها المتصفح وقت التصدير
+// (استُبدل بـ Amiri لخط أوضح وأكثر ملاءمة للمطبوعات)
 Font.register({
-  family: 'Amiri',
+  family: 'Tajawal',
   fonts: [
-    { src: '/fonts/amiri/Amiri_400Regular.ttf', fontWeight: 400 },
-    { src: '/fonts/amiri/Amiri_700Bold.ttf', fontWeight: 700 },
+    { src: '/fonts/tajawal/Tajawal_400Regular.ttf', fontWeight: 400 },
+    { src: '/fonts/tajawal/Tajawal_700Bold.ttf', fontWeight: 700 },
   ],
 })
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Amiri',
+    fontFamily: 'Tajawal',
     direction: 'rtl',
     paddingHorizontal: 24,
     paddingVertical: 24,
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
   totalsVal: { fontWeight: 700, fontSize: 8, padding: 4, textAlign: 'right' },
   // سجل الطفل الفردي (طولي)
   detailPage: {
-    fontFamily: 'Amiri',
+    fontFamily: 'Tajawal',
     direction: 'rtl',
     paddingHorizontal: 40,
     paddingVertical: 32,
@@ -233,10 +235,12 @@ export interface ChildDetailPdfProps {
     father_grandfather_name: string
     father_national_id: string
     father_passport_number?: string | null
+    father_phone_number?: string | null
     mother_first_name: string
     mother_grandfather_name: string
     mother_national_id: string | null
     mother_passport_number?: string | null
+    mother_phone_number?: string | null
     vaccination_date: string
     vaccinator_name: string
     batch_number: string
@@ -244,6 +248,8 @@ export interface ChildDetailPdfProps {
     batch_expiry_date?: string
     is_verified?: boolean
     hospital_name?: string
+    created_at?: string | null
+    verified_at?: string | null
   }
 }
 
@@ -281,6 +287,7 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
           <DetailRow label="اسم الأب الكامل" value={fatherName} />
           <DetailRow label="الرقم القومي" value={record.father_national_id} />
           <DetailRow label="رقم الجواز" value={record.father_passport_number ?? ''} />
+          <DetailRow label="رقم التليفون" value={record.father_phone_number ?? ''} />
         </View>
 
         <View style={styles.section}>
@@ -288,6 +295,7 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
           <DetailRow label="اسم الأم الكامل" value={motherName} />
           <DetailRow label="الرقم القومي" value={record.mother_national_id ?? ''} />
           <DetailRow label="رقم الجواز" value={record.mother_passport_number ?? ''} />
+          <DetailRow label="رقم التليفون" value={record.mother_phone_number ?? ''} />
         </View>
 
         <View style={styles.section}>
@@ -301,6 +309,12 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
             label="الحالة"
             value={record.is_verified ? 'موثّق' : 'غير موثّق'}
           />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>تتبّع</Text>
+          <DetailRow label="تاريخ الإدخال" value={formatCairoDateTime(record.created_at)} />
+          <DetailRow label="تاريخ التوثيق" value={record.verified_at ? formatCairoDateTime(record.verified_at) : '-'} />
         </View>
       </Page>
     </Document>

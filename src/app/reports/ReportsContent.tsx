@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Link from "next/link"
 import type { UserRole, Hospital } from "@/types/database"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import {
   ChildrenReportPdf,
-  ChildDetailPdf,
   downloadPdf,
   type ChildReportRow,
 } from "@/lib/reports/pdfDocuments"
@@ -52,6 +52,7 @@ interface Props {
 export default function ReportsContent({ hospitals, userRole, hospitalIds }: Props) {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
+  const [dateType, setDateType] = useState<'birth_date' | 'created_at'>('birth_date')
   const [hospitalId, setHospitalId] = useState("")
   const [records, setRecords] = useState<ChildRecord[]>([])
   const [stats, setStats] = useState<{ total: number; male: number; female: number; byHospital: HospitalStat[] } | null>(null)
@@ -71,6 +72,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
     if (hospitalId) params.set('hospital_id', hospitalId)
+    if (dateType) params.set('date_type', dateType)
 
     try {
       const res = await fetch(`/api/reports?${params}`)
@@ -162,40 +164,6 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     }
   }
 
-  async function handleExportChildPdf(r: ChildRecord) {
-    setExporting('pdf')
-    try {
-      await downloadPdf(
-        <ChildDetailPdf
-          record={{
-            child_full_name: r.child_full_name,
-            child_gender: r.child_gender,
-            child_nationality: r.child_nationality,
-            birth_date: r.birth_date,
-            father_first_name: r.father_first_name,
-            father_grandfather_name: r.father_grandfather_name,
-            father_national_id: r.father_national_id,
-            father_passport_number: r.father_passport_number,
-            mother_first_name: r.mother_first_name,
-            mother_grandfather_name: r.mother_grandfather_name,
-            mother_national_id: r.mother_national_id,
-            mother_passport_number: r.mother_passport_number,
-            vaccination_date: r.vaccination_date,
-            vaccinator_name: r.vaccinators?.full_name ?? '',
-            batch_number: r.vaccine_batches?.batch_number ?? '',
-            batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
-            batch_expiry_date: r.vaccine_batches?.expiry_date ?? '',
-            is_verified: r.is_verified,
-            hospital_name: r.hospitals?.name,
-          }}
-        />,
-        `سجل-${r.child_full_name}-${new Date().toISOString().slice(0, 10)}.pdf`
-      )
-    } finally {
-      setExporting('')
-    }
-  }
-
   function formatFullName(firstName: string, grandfatherName: string): string {
     return `${firstName} ${grandfatherName}`
   }
@@ -204,22 +172,36 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
   const selectedHospitalName = hospitalId ? hospitalMap[hospitalId] : null
   const reportHospitalName = selectedHospitalName
     ?? (userRole !== 'moh_admin' ? hospitals.map(h => h.name).join('، ') : 'كل المستشفيات')
-  const reportDateRange = dateFrom || dateTo ? `من ${dateFrom || '...'} إلى ${dateTo || '...'}` : ''
+  const reportDateRange = dateFrom || dateTo
+    ? `${dateType === 'birth_date' ? 'حسب تاريخ الميلاد' : 'حسب تاريخ الإدخال'} — من ${dateFrom || '...'} إلى ${dateTo || '...'}`
+    : ''
 
   return (
     <div className="space-y-6">
       {/* Search form */}
       <form onSubmit={handleSearch} className="card p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">من تاريخ</label>
+            <label className="block text-sm font-medium text-gray-700">
+              {dateType === 'birth_date' ? 'من تاريخ الميلاد' : 'من تاريخ الإدخال'}
+            </label>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">إلى تاريخ</label>
+            <label className="block text-sm font-medium text-gray-700">
+              {dateType === 'birth_date' ? 'إلى تاريخ الميلاد' : 'إلى تاريخ الإدخال'}
+            </label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">الفلترة حسب</label>
+            <select value={dateType} onChange={e => setDateType(e.target.value as 'birth_date' | 'created_at')}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+              <option value="birth_date">تاريخ ميلاد الطفل (الأساسي)</option>
+              <option value="created_at">تاريخ الإدخال الفعلي</option>
+            </select>
           </div>
           {userRole === 'moh_admin' && (
             <div>
@@ -360,10 +342,10 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                       </td>
                     )}
                     <td className="py-2 px-3 print:hidden">
-                      <button type="button" onClick={() => handleExportChildPdf(r)} disabled={exporting !== ''}
-                        className="text-primary hover:text-primary-dark text-sm disabled:opacity-50">
+                      <Link href={`/reports/child/${r.id}`} target="_blank"
+                        className="text-primary hover:text-primary-dark text-sm">
                         سجل فردي
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 ))}

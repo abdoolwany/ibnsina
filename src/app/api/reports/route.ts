@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { cairoDayStartUtc, cairoDayEndExclusiveUtc } from '@/lib/time'
 
 type ChildRecord = Record<string, unknown> & {
   id: string
@@ -40,6 +41,8 @@ export async function GET(request: Request) {
   const dateFrom = searchParams.get('date_from')
   const dateTo = searchParams.get('date_to')
   const hospitalId = searchParams.get('hospital_id')
+  // نوع الفلترة الزمنية: birth_date (تاريخ ميلاد الطفل - الافتراضي) أو created_at (تاريخ الإدخال الفعلي)
+  const dateType = searchParams.get('date_type') === 'created_at' ? 'created_at' : 'birth_date'
 
   // Get user profile and links
   const profileResult = await (supabase.from('user_profiles').select('role').eq('id', user.id).single() as never) as { data: { role: string } | null }
@@ -68,8 +71,18 @@ export async function GET(request: Request) {
   }
 
   // Date range filter
-  if (dateFrom) query = query.gte('vaccination_date', dateFrom)
-  if (dateTo) query = query.lte('vaccination_date', dateTo)
+  // birth_date: مقارنة نصية مباشرة على عمود التاريخ.
+  // created_at: النطاق يُترجم لحدود منتصف ليل توقيت القاهرة (بداية اليوم/نهايته = 12 ليلًا)
+  if (dateFrom) {
+    query = dateType === 'created_at'
+      ? query.gte('created_at', cairoDayStartUtc(dateFrom))
+      : query.gte('birth_date', dateFrom)
+  }
+  if (dateTo) {
+    query = dateType === 'created_at'
+      ? query.lt('created_at', cairoDayEndExclusiveUtc(dateTo))
+      : query.lte('birth_date', dateTo)
+  }
 
   query = query.eq('is_deleted', false).order('vaccination_date', { ascending: false })
 
@@ -109,7 +122,7 @@ export async function GET(request: Request) {
     action: 'insert',
     performed_by: user.id,
     new_value: {
-      report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId },
+      report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId, date_type: dateType },
     },
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
