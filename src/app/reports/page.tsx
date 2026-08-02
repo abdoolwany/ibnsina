@@ -32,6 +32,7 @@ export default async function ReportsPage() {
           hospitals={hospitals}
           userRole={user.role}
           hospitalIds={user.hospitalIds}
+          userId={user.id}
         />
       </main>
     </div>

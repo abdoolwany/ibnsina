@@ -1,5 +1,5 @@
 import { createServerSupabase } from '@/lib/supabase/server'
-import type { UnverifyRequestDetail, UnverifyRequestStatus } from '@/types/database'
+import type { UnverifyRequestDetail } from '@/types/database'
 
 export interface PendingUnverifyRequest {
   id: string
@@ -12,6 +12,8 @@ export interface PendingUnverifyRequest {
 }
 
 // طلبات إعادة فتح التوثيق المعلّقة لمجموعة مستشفيات (لوحة المستوى الأول)
+// ملاحظة: جدول unverify_requests له مفتاحان أجنبيان إلى user_profiles (requested_by و resolved_by)،
+// لذلك يجب تحديد المفتاح صراحة (requested_by_fkey) وإلا فشل PostgREST بـ PGRST201.
 export async function getPendingUnverifyRequestsByHospitals(hospitalIds: string[]): Promise<PendingUnverifyRequest[]> {
   const supabase = await createServerSupabase()
   const { data } = await supabase
@@ -22,7 +24,7 @@ export async function getPendingUnverifyRequestsByHospitals(hospitalIds: string[
       requested_at,
       hospitals(name),
       child_vaccination_records(child_full_name, vaccination_date),
-      user_profiles(full_name)
+      user_profiles!unverify_requests_requested_by_fkey(full_name)
     `)
     .in('hospital_id', hospitalIds)
     .eq('status', 'pending')
@@ -42,7 +44,7 @@ export async function getAllPendingUnverifyRequests(): Promise<PendingUnverifyRe
       requested_at,
       hospitals(name),
       child_vaccination_records(child_full_name, vaccination_date),
-      user_profiles(full_name)
+      user_profiles!unverify_requests_requested_by_fkey(full_name)
     `)
     .eq('status', 'pending')
     .order('requested_at', { ascending: true })
@@ -67,22 +69,8 @@ function mapRequests(data: unknown): PendingUnverifyRequest[] {
   }))
 }
 
-// أحدث حالة طلب لكل سجل موثّق في مستشفى (لعرض حالة الطلب في قسم السجلات الموثّقة)
-export async function getRequestStatusByRecordIds(hospitalId: string): Promise<Record<string, UnverifyRequestStatus>> {
-  const supabase = await createServerSupabase()
-  const { data } = await supabase
-    .from('unverify_requests')
-    .select('record_id, status')
-    .eq('hospital_id', hospitalId)
-  const rows = (data ?? []) as Array<{ record_id: string; status: UnverifyRequestStatus }>
-  const map: Record<string, UnverifyRequestStatus> = {}
-  for (const r of rows) {
-    // عند وجود أكثر من طلب لنفس السجل، تُعرض أحدث حالة (المعلّق هو الأولوية)
-    if (!map[r.record_id] || r.status === 'pending') {
-      map[r.record_id] = r.status
-    }
-  }
-  return map
-}
+// أحدث حالة طلب لكل سجل موثّق في مستشفى تُقرأ الآن من RPC search_child_records
+// في تقرير الأطفال (عمود request_status) — هذه الدالة أُزيلت لأن عرض حالة الطلبات
+// انتقل إلى شاشة التقارير (القسم المكتمل في الترحيل 20).
 
 export type { UnverifyRequestDetail }

@@ -4,9 +4,7 @@ import { getChildrenByHospital } from '@/lib/db/children'
 import { getHospitalById } from '@/lib/db/hospitals'
 import { getVaccinatorsByHospital } from '@/lib/db/vaccinators'
 import { getBatchBalance } from '@/lib/db/batches'
-import { getRequestStatusByRecordIds } from '@/lib/db/unverifyRequests'
 import VerifyList from './VerifyList'
-import VerifiedRequestsSection from './VerifiedRequestsSection'
 import BatchBalanceTable from './BatchBalanceTable'
 import Link from 'next/link'
 
@@ -22,7 +20,6 @@ export default async function HospitalVerifierPage() {
   const balances = await getBatchBalance(hospitalId)
   const pendingVerification = children.filter(c => !c.is_verified)
   const verified = children.filter(c => c.is_verified)
-  const requestStatuses = await getRequestStatusByRecordIds(hospitalId)
 
   return (
     <DashboardShell allowedRoles={['hospital_verifier']}>
@@ -69,17 +66,6 @@ export default async function HospitalVerifierPage() {
             <VerifyList records={pendingVerification} userId={user!.id} />
           )}
         </div>
-
-        <VerifiedRequestsSection
-          verifiedRecords={verified.map(c => ({
-            id: c.id,
-            child_full_name: c.child_full_name,
-            vaccination_date: c.vaccination_date,
-            requestStatus: requestStatuses[c.id] ?? null,
-          }))}
-          hospitalId={hospitalId}
-          userId={user!.id}
-        />
       </div>
     </DashboardShell>
   )

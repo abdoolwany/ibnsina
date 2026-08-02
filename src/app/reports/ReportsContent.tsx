@@ -3,6 +3,7 @@
 import { useState, useRef } from "react"
 import Link from "next/link"
 import type { UserRole, Hospital } from "@/types/database"
+import { createClient } from "@/lib/supabase/client"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import {
   ChildrenReportPdf,
@@ -22,15 +23,19 @@ interface ChildRecord {
   father_grandfather_name: string
   father_national_id: string
   father_passport_number: string | null
+  father_phone_number: string | null
   mother_first_name: string
   mother_grandfather_name: string
   mother_national_id: string | null
   mother_passport_number: string | null
+  mother_phone_number: string | null
   vaccination_date: string
   batch_id: string
   vaccinator_id: string
   is_verified: boolean
   verified_at: string | null
+  created_at: string
+  request_status: 'pending' | 'approved' | 'rejected' | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
   hospitals: { name: string } | null
@@ -48,21 +53,36 @@ interface Props {
   hospitals: Hospital[]
   userRole: UserRole | null
   hospitalIds: string[]
+  userId: string
 }
 
-export default function ReportsContent({ hospitals, userRole, hospitalIds }: Props) {
+export default function ReportsContent({ hospitals, userRole, hospitalIds, userId }: Props) {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [dateType, setDateType] = useState<'birth_date' | 'created_at'>('birth_date')
   const [hospitalId, setHospitalId] = useState("")
+  const [childName, setChildName] = useState("")
+  const [fatherName, setFatherName] = useState("")
+  const [fatherGrandfather, setFatherGrandfather] = useState("")
+  const [fatherNationalId, setFatherNationalId] = useState("")
+  const [fatherPassport, setFatherPassport] = useState("")
+  const [fatherPhone, setFatherPhone] = useState("")
+  const [motherName, setMotherName] = useState("")
+  const [motherGrandfather, setMotherGrandfather] = useState("")
+  const [motherNationalId, setMotherNationalId] = useState("")
+  const [motherPassport, setMotherPassport] = useState("")
+  const [motherPhone, setMotherPhone] = useState("")
+  const [batchNumber, setBatchNumber] = useState("")
   const [records, setRecords] = useState<ChildRecord[]>([])
   const [stats, setStats] = useState<{ total: number; male: number; female: number; byHospital: HospitalStat[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState<'' | 'excel' | 'pdf'>('')
+  const [requestingId, setRequestingId] = useState<string | null>(null)
   const [error, setError] = useState("")
   const printRef = useRef<HTMLDivElement>(null)
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
+  const isVerifier = userRole === 'hospital_verifier'
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -74,6 +94,18 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     if (dateTo) params.set('date_to', dateTo)
     if (hospitalId) params.set('hospital_id', hospitalId)
     if (dateType) params.set('date_type', dateType)
+    if (childName.trim()) params.set('child_name', childName.trim())
+    if (fatherName.trim()) params.set('father_name', fatherName.trim())
+    if (fatherGrandfather.trim()) params.set('father_grandfather', fatherGrandfather.trim())
+    if (fatherNationalId.trim()) params.set('father_national_id', fatherNationalId.trim())
+    if (fatherPassport.trim()) params.set('father_passport', fatherPassport.trim())
+    if (fatherPhone.trim()) params.set('father_phone', fatherPhone.trim())
+    if (motherName.trim()) params.set('mother_name', motherName.trim())
+    if (motherGrandfather.trim()) params.set('mother_grandfather', motherGrandfather.trim())
+    if (motherNationalId.trim()) params.set('mother_national_id', motherNationalId.trim())
+    if (motherPassport.trim()) params.set('mother_passport', motherPassport.trim())
+    if (motherPhone.trim()) params.set('mother_phone', motherPhone.trim())
+    if (batchNumber.trim()) params.set('batch_number', batchNumber.trim())
 
     try {
       const res = await fetch(`/api/reports?${params}`)
@@ -89,6 +121,28 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     }
 
     setLoading(false)
+  }
+
+  // إرسال طلب إعادة فتح توثيق سجل موثّق إلى الوزارة (للموثّق فقط)
+  async function handleRequestUnverify(r: ChildRecord) {
+    if (!window.confirm(`إرسال طلب إعادة فتح توثيق «${r.child_full_name}» إلى الوزارة؟`)) return
+    setRequestingId(r.id)
+    setError("")
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('unverify_requests').insert({
+        record_id: r.id,
+        hospital_id: hospitalIds[0],
+        requested_by: userId,
+        reason: null,
+      } as never)
+      if (error) throw new Error(error.message)
+      // تحديث الحالة محليًا لتظهر "بانتظار الرد" فورًا دون إعادة بحث كامل
+      setRecords(prev => prev.map(x => x.id === r.id ? { ...x, request_status: 'pending' } : x))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'فشل إرسال الطلب')
+    }
+    setRequestingId(null)
   }
 
   function handlePrint() {
@@ -177,6 +231,8 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     ? `${dateType === 'birth_date' ? 'حسب تاريخ الميلاد' : 'حسب تاريخ الإدخال'} — من ${dateFrom || '...'} إلى ${dateTo || '...'}`
     : ''
 
+  const textInput = "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+
   return (
     <div className="space-y-6">
       {/* Search form */}
@@ -187,19 +243,19 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
               {dateType === 'birth_date' ? 'من تاريخ الميلاد' : 'من تاريخ الإدخال'}
             </label>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              className={textInput} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
               {dateType === 'birth_date' ? 'إلى تاريخ الميلاد' : 'إلى تاريخ الإدخال'}
             </label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              className={textInput} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">الفلترة حسب</label>
             <select value={dateType} onChange={e => setDateType(e.target.value as 'birth_date' | 'created_at')}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+              className={textInput}>
               <option value="birth_date">تاريخ ميلاد الطفل (الأساسي)</option>
               <option value="created_at">تاريخ الإدخال الفعلي</option>
             </select>
@@ -208,7 +264,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
               <select value={hospitalId} onChange={e => setHospitalId(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                className={textInput}>
                 <option value="">كل المستشفيات</option>
                 {hospitals.map(h => (
                   <option key={h.id} value={h.id}>{h.name}</option>
@@ -217,7 +273,88 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
             </div>
           )}
         </div>
-        <div className="flex gap-3">
+
+        {/* بيانات الطفل */}
+        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الطفل</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">اسم الطفل</label>
+            <input type="text" value={childName} onChange={e => setChildName(e.target.value)}
+              className={textInput} />
+          </div>
+        </div>
+
+        {/* بيانات الأب */}
+        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الأب</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">اسم الأب</label>
+            <input type="text" value={fatherName} onChange={e => setFatherName(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
+            <input type="text" value={fatherGrandfather} onChange={e => setFatherGrandfather(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+            <input type="text" value={fatherNationalId} onChange={e => setFatherNationalId(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">جواز السفر</label>
+            <input type="text" value={fatherPassport} onChange={e => setFatherPassport(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">تليفون الأب</label>
+            <input type="text" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)}
+              className={textInput} />
+          </div>
+        </div>
+
+        {/* بيانات الأم */}
+        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الأم</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">اسم الأم</label>
+            <input type="text" value={motherName} onChange={e => setMotherName(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
+            <input type="text" value={motherGrandfather} onChange={e => setMotherGrandfather(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+            <input type="text" value={motherNationalId} onChange={e => setMotherNationalId(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">جواز السفر</label>
+            <input type="text" value={motherPassport} onChange={e => setMotherPassport(e.target.value)}
+              className={textInput} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">تليفون الأم</label>
+            <input type="text" value={motherPhone} onChange={e => setMotherPhone(e.target.value)}
+              className={textInput} />
+          </div>
+        </div>
+
+        {/* التطعيم */}
+        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">التطعيم</h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
+            <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
+              className={textInput} />
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-4">
           <button type="submit" disabled={loading}
             className="btn btn-primary">
             {loading ? "جاري البحث..." : "بحث"}
@@ -318,6 +455,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                   <th className="py-3 px-3">تاريخ دخول الطلبية</th>
                   {isMinistry && <th className="py-3 px-3 print:hidden">الحالة</th>}
                   <th className="py-3 px-3 print:hidden">سجل فردي</th>
+                  {isVerifier && <th className="py-3 px-3 print:hidden">إعادة فتح التوثيق</th>}
                 </tr>
               </thead>
               <tbody>
@@ -348,6 +486,28 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                         سجل فردي
                       </Link>
                     </td>
+                    {isVerifier && (
+                      <td className="py-2 px-3 print:hidden">
+                        {!r.is_verified ? (
+                          <span className="text-xs text-gray-400">غير موثق</span>
+                        ) : r.request_status === 'pending' ? (
+                          <span className="badge badge-warning">بانتظار الرد</span>
+                        ) : (
+                          <div className="flex flex-col items-start gap-1">
+                            {r.request_status === 'rejected' && (
+                              <span className="text-xs text-red-600">سبق رفض الطلب</span>
+                            )}
+                            <button
+                              type="button"
+                              disabled={requestingId === r.id}
+                              onClick={() => handleRequestUnverify(r)}
+                              className="text-primary hover:text-primary-dark text-sm disabled:opacity-50">
+                              {requestingId === r.id ? 'جاري الإرسال...' : 'طلب إعادة فتح'}
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

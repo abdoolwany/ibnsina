@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback } from "react"
 import type { UserRole, Hospital } from "@/types/database"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import { BatchesReportPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
@@ -27,6 +27,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [hospitalId, setHospitalId] = useState("")
+  const [batchNumber, setBatchNumber] = useState("")
   const [includeEmptied, setIncludeEmptied] = useState(false)
   const [rows, setRows] = useState<BatchMovementRow[]>([])
   const [totals, setTotals] = useState<{ received: number; used: number; remaining: number } | null>(null)
@@ -45,6 +46,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
     if (hospitalId) params.set('hospital_id', hospitalId)
+    if (batchNumber.trim()) params.set('batch_number', batchNumber.trim())
     if (showEmptied) params.set('include_emptied', 'true')
 
     try {
@@ -61,7 +63,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     }
 
     setLoading(false)
-  }, [dateFrom, dateTo, hospitalId])
+  }, [dateFrom, dateTo, hospitalId, batchNumber])
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -70,10 +72,10 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   }
 
   // إعادة التحميل فورًا عند تبديل إظهار/إخفاء التشغيلات التي فرغت من الطعوم
-  useEffect(() => {
-    if (hasSearched) runSearch(includeEmptied)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeEmptied])
+  function handleToggleEmptied(checked: boolean) {
+    setIncludeEmptied(checked)
+    if (hasSearched) runSearch(checked)
+  }
 
   const hospitalMap = Object.fromEntries(hospitals.map(h => [h.id, h.name]))
   const selectedHospitalName = hospitalId ? hospitalMap[hospitalId] : null
@@ -140,6 +142,11 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
+            <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
+              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+          </div>
           {userRole === 'moh_admin' && (
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
@@ -155,7 +162,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={includeEmptied} onChange={e => setIncludeEmptied(e.target.checked)}
+            <input type="checkbox" checked={includeEmptied} onChange={e => handleToggleEmptied(e.target.checked)}
               className="rounded border-gray-300" />
             إظهار التشغيلات التي فرغت منها الطعوم
           </label>

@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const dateTo = searchParams.get('date_to')
   const hospitalId = searchParams.get('hospital_id')
   const includeEmptied = searchParams.get('include_emptied') === 'true'
+  const batchNumber = searchParams.get('batch_number')
 
   const profileResult = await (supabase.from('user_profiles').select('role').eq('id', user.id).single() as never) as { data: { role: string } | null }
   const role = profileResult.data?.role
@@ -39,6 +40,7 @@ export async function GET(request: Request) {
 
   if (dateFrom) query = query.gte('delivery_date', dateFrom)
   if (dateTo) query = query.lte('delivery_date', dateTo)
+  if (batchNumber && batchNumber.trim()) query = query.ilike('batch_number', `%${batchNumber.trim()}%`)
 
   query = query.order('delivery_date', { ascending: false })
 
@@ -52,6 +54,7 @@ export async function GET(request: Request) {
   const batchIds = allBatches.map(b => b.id)
 
   // عدد الجرعات المستخدمة لكل دفعة ضمن الفترة (كل السجلات غير المحذوفة)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let usedQuery: any = supabase
     .from('child_vaccination_records')
     .select('batch_id')
@@ -68,6 +71,7 @@ export async function GET(request: Request) {
   }
 
   // الرصيد المتبقي الحالي لكل دفعة عبر الـ View (خاضع لـ RLS)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let balanceQuery: any = supabase.from('batch_balance_view').select('*')
   if (role !== 'moh_admin') {
     balanceQuery = balanceQuery.in('hospital_id', userHospitalIds)
@@ -96,14 +100,13 @@ export async function GET(request: Request) {
   )
 
   // تسجيل التقرير في سجل التدقيق
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await (supabase.from('audit_log').insert({
     table_name: 'reports_batches',
     record_id: '00000000-0000-0000-0000-000000000000',
     action: 'insert',
     performed_by: user.id,
-    new_value: { report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId, include_emptied: includeEmptied } },
-  } as any))
+    new_value: { report_params: { date_from: dateFrom, date_to: dateTo, hospital_id: hospitalId, include_emptied: includeEmptied, batch_number: batchNumber } },
+  } as never))
 
   return NextResponse.json({ rows: visibleRows, totals })
 }
