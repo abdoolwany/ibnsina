@@ -77,6 +77,14 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
     if (hasSearched) runSearch(checked)
   }
 
+  // تفريغ كل حقول البحث للبدء ببيانات جديدة
+  function handleReset() {
+    setDateFrom("")
+    setDateTo("")
+    setHospitalId("")
+    setBatchNumber("")
+  }
+
   const hospitalMap = Object.fromEntries(hospitals.map(h => [h.id, h.name]))
   const selectedHospitalName = hospitalId ? hospitalMap[hospitalId] : null
   const reportHospitalName = selectedHospitalName
@@ -169,6 +177,10 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
           <button type="submit" disabled={loading}
             className="btn btn-primary">
             {loading ? "جاري البحث..." : "عرض التقرير"}
+          </button>
+          <button type="button" onClick={handleReset}
+            className="btn btn-secondary">
+            تفريغ الحقول
           </button>
         </div>
       </form>

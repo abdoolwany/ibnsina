@@ -123,6 +123,25 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
     setLoading(false)
   }
 
+  // تفريغ كل حقول البحث للبدء ببيانات جديدة
+  function handleReset() {
+    setDateFrom("")
+    setDateTo("")
+    setHospitalId("")
+    setChildName("")
+    setFatherName("")
+    setFatherGrandfather("")
+    setFatherNationalId("")
+    setFatherPassport("")
+    setFatherPhone("")
+    setMotherName("")
+    setMotherGrandfather("")
+    setMotherNationalId("")
+    setMotherPassport("")
+    setMotherPhone("")
+    setBatchNumber("")
+  }
+
   // إرسال طلب إعادة فتح توثيق سجل موثّق إلى الوزارة (للموثّق فقط)
   async function handleRequestUnverify(r: ChildRecord) {
     if (!window.confirm(`إرسال طلب إعادة فتح توثيق «${r.child_full_name}» إلى الوزارة؟`)) return
@@ -358,6 +377,10 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
           <button type="submit" disabled={loading}
             className="btn btn-primary">
             {loading ? "جاري البحث..." : "بحث"}
+          </button>
+          <button type="button" onClick={handleReset}
+            className="btn btn-secondary">
+            تفريغ الحقول
           </button>
           {records.length > 0 && (
             <button type="button" onClick={handlePrint}
