@@ -15,8 +15,11 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
   const [name, setName] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showInactive, setShowInactive] = useState(false)
   const router = useRouter()
   const supabase = createClient()
+
+  const visible = showInactive ? vaccinators : vaccinators.filter(v => v.is_active)
 
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
@@ -57,37 +60,20 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
     }
   }
 
-  // حذف ذكي: إن كان الاسم مسجّلًا على أطفال يُوقف فقط (يُزال من خيارات الإدخال مع بقاء السجل التاريخي)،
-  // وإن لم يكن مستخدمًا يُحذف نهائيًا.
+  // حذف = إخفاء: يُوقف الاسم (is_active=false) فيُختفى من القائمة وخيارات الإدخال،
+  // مع بقائه كاملًا في السجلات التاريخية لأي طفل سبق أن سُجِّل باسمه.
   async function handleDelete(v: Vaccinator) {
     setError("")
-    const { count } = await supabase
-      .from('child_vaccination_records')
-      .select('id', { count: 'exact', head: true })
-      .eq('vaccinator_id', v.id)
-      .eq('is_deleted', false)
-
-    if (count && count > 0) {
-      const ok = window.confirm(
-        `«${v.full_name}» مسجّل على ${count} طفل. لن يُحذف من السجلات التاريخية، لكن سيُزال من خيارات الإدخال. هل تريد المتابعة؟`
-      )
-      if (!ok) return
-      const { error } = await supabase
-        .from('vaccinators')
-        .update({ is_active: false } as never)
-        .eq('id', v.id)
-      if (error) setError(error.message)
-      else router.refresh()
-    } else {
-      const ok = window.confirm(`حذف نهائي لـ «${v.full_name}»؟ لا يوجد أي طفل مسجّل تحت اسمه.`)
-      if (!ok) return
-      const { error } = await supabase
-        .from('vaccinators')
-        .delete()
-        .eq('id', v.id)
-      if (error) setError(error.message)
-      else router.refresh()
-    }
+    const ok = window.confirm(
+      `إخفاء «${v.full_name}» من قائمة القائمين بالتطعيم؟\nلن يُحذف أي سجل تاريخي باسمه، ويمكن إظهاره مجددًا من خيار «عرض الموقوفين».`
+    )
+    if (!ok) return
+    const { error } = await supabase
+      .from('vaccinators')
+      .update({ is_active: false } as never)
+      .eq('id', v.id)
+    if (error) setError(error.message)
+    else router.refresh()
   }
 
   return (
@@ -114,6 +100,18 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>
       )}
 
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            checked={showInactive}
+            onChange={e => setShowInactive(e.target.checked)}
+            className="h-4 w-4"
+          />
+          عرض الموقوفين (المخفيين) لإعادة تفعيلهم
+        </label>
+      </div>
+
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -125,14 +123,14 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
             </tr>
           </thead>
           <tbody>
-            {vaccinators.length === 0 ? (
+            {visible.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-8 text-center text-gray-500">
-                  لا يوجد قائمون بالتطعيم بعد
+                  {showInactive ? 'لا يوجد قائمون موقوفون' : 'لا يوجد قائمون بالتطعيم بعد'}
                 </td>
               </tr>
             ) : (
-              vaccinators.map(v => (
+              visible.map(v => (
                 <tr key={v.id} className="border-b hover:bg-gray-50">
                   <td className="py-3 px-4">{v.full_name}</td>
                   <td className="py-3 px-4">
@@ -142,20 +140,24 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
                     }
                   </td>
                   <td className="py-3 px-4">
-                    <button
-                      onClick={() => handleToggle(v.id, v.is_active)}
-                      className={`text-sm px-3 py-1 rounded ${v.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
-                    >
-                      {v.is_active ? 'إيقاف' : 'تفعيل'}
-                    </button>
+                    {!v.is_active && (
+                      <button
+                        onClick={() => handleToggle(v.id, v.is_active)}
+                        className="text-sm px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200"
+                      >
+                        تفعيل
+                      </button>
+                    )}
                   </td>
                   <td className="py-3 px-4">
-                    <button
-                      onClick={() => handleDelete(v)}
-                      className="text-sm px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700"
-                    >
-                      حذف
-                    </button>
+                    {v.is_active && (
+                      <button
+                        onClick={() => handleDelete(v)}
+                        className="text-sm px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700"
+                      >
+                        إخفاء
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))

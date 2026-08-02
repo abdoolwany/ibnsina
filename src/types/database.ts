@@ -81,11 +81,39 @@ export interface ChildVaccinationRecord {
   is_deleted: boolean
 }
 
+export type UnverifyRequestStatus = 'pending' | 'approved' | 'rejected'
+
+export interface UnverifyRequest {
+  id: string
+  record_id: string
+  hospital_id: string
+  requested_by: string
+  reason: string | null
+  status: UnverifyRequestStatus
+  resolved_by: string | null
+  resolved_at: string | null
+  requested_at: string
+}
+
+// طلب إعادة فتح التوثيق مع تفاصيل السجل والمستشفى واسم الطالب (لشاشات الوزارة)
+export interface UnverifyRequestDetail {
+  id: string
+  record_id: string
+  hospital_id: string
+  hospital_name?: string
+  child_full_name: string
+  vaccination_date: string
+  requester_name?: string
+  reason: string | null
+  status: UnverifyRequestStatus
+  requested_at: string
+}
+
 export interface AuditLog {
   id: string
   table_name: string
   record_id: string
-  action: 'insert' | 'update' | 'verify' | 'delete_attempt'
+  action: 'insert' | 'update' | 'verify' | 'delete_attempt' | 'unverify' | 'request_create' | 'request_resolve'
   performed_by: string
   performed_at: string
   old_value: Record<string, unknown> | null
@@ -159,6 +187,11 @@ export interface Database {
         Row: DeletedChildVaccinationRecord
         Insert: Omit<DeletedChildVaccinationRecord, 'id' | 'deleted_at'>
         Update: Record<string, never>
+      }
+      unverify_requests: {
+        Row: UnverifyRequest
+        Insert: Omit<UnverifyRequest, 'id' | 'requested_at' | 'status'>
+        Update: Partial<Omit<UnverifyRequest, 'id'>>
       }
     }
     Views: {

@@ -1,9 +1,10 @@
 import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
-import { getChildrenByHospital, getAllVerifiedRecords } from '@/lib/db/children'
+import { getChildrenByHospital } from '@/lib/db/children'
 import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
-import ReopenVerificationList from '@/components/ReopenVerificationList'
+import { getAllPendingUnverifyRequests } from '@/lib/db/unverifyRequests'
+import UnverifyRequestsList from '@/components/UnverifyRequestsList'
 
 export default async function MohAdminPage() {
   const user = await getCurrentUser()
@@ -11,7 +12,7 @@ export default async function MohAdminPage() {
 
   const hospitals = await getAllHospitals()
 
-  const [hospitalData, verifiedRecords] = await Promise.all([
+  const [hospitalData, pendingRequests] = await Promise.all([
     Promise.all(
       hospitals.map(async h => {
         const batches = await getBatchesByHospital(h.id)
@@ -23,7 +24,7 @@ export default async function MohAdminPage() {
         return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
       })
     ),
-    getAllVerifiedRecords(),
+    getAllPendingUnverifyRequests(),
   ])
   const totals = hospitalData.reduce(
     (s, h) => ({
@@ -105,7 +106,7 @@ export default async function MohAdminPage() {
           </table>
         </div>
 
-      <ReopenVerificationList records={verifiedRecords} />
+      <UnverifyRequestsList requests={pendingRequests} />
       </div>
     </DashboardShell>
   )

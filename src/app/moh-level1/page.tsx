@@ -2,10 +2,10 @@ import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getBatchBalance } from '@/lib/db/batches'
-import { getVerifiedRecordsByHospitals } from '@/lib/db/children'
+import { getPendingUnverifyRequestsByHospitals } from '@/lib/db/unverifyRequests'
 import BatchForm from './BatchForm'
 import BatchListTable from './BatchListTable'
-import ReopenVerificationList from '@/components/ReopenVerificationList'
+import UnverifyRequestsList from '@/components/UnverifyRequestsList'
 
 export default async function MohLevel1Page() {
   const user = await getCurrentUser()
@@ -14,7 +14,7 @@ export default async function MohLevel1Page() {
   const hospitals = await getAllHospitals()
   const linkedHospitals = hospitals.filter(h => user.hospitalIds.includes(h.id))
 
-  const [hospitalData, verifiedRecords] = await Promise.all([
+  const [hospitalData, pendingRequests] = await Promise.all([
     Promise.all(
       linkedHospitals.map(async h => {
         const balances = await getBatchBalance(h.id)
@@ -24,7 +24,7 @@ export default async function MohLevel1Page() {
         return { ...h, balances, totalDelivered, used, remaining }
       })
     ),
-    getVerifiedRecordsByHospitals(user.hospitalIds),
+    getPendingUnverifyRequestsByHospitals(user.hospitalIds),
   ])
 
   return (
@@ -60,7 +60,7 @@ export default async function MohLevel1Page() {
           </div>
         ))}
 
-        <ReopenVerificationList records={verifiedRecords} />
+        <UnverifyRequestsList requests={pendingRequests} />
       </div>
     </DashboardShell>
   )
