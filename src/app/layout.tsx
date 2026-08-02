@@ -2,8 +2,8 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "نظام تتبع تطعيم كبدي B للأطفال حديثي الولادة",
-  description: "نظام لتتبع توزيع لقاح التهاب الكبد الوبائي (B) للأطفال حديثي الولادة من مخازن وزارة الصحة إلى مستشفيات الولادة",
+  title: "منظومة تطعيم الكبدي B للرضع — الإدارة الصحية بالعاشر من رمضان",
+  description: "منظومة لتتبع تطعيم الأطفال حديثي الولادة ضد الالتهاب الكبدي (B) من مخازن وزارة الصحة إلى مستشفيات الولادة",
 }
 
 export default function RootLayout({

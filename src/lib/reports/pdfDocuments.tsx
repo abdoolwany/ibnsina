@@ -189,7 +189,7 @@ export function ChildrenReportPdf({ rows, isMinistry, dateRange, hospitalName, t
     { header: 'تاريخ التطعيم', flex: 1, render: (r) => r.vaccination_date },
     { header: 'القائم بالتطعيم', flex: 1.3, render: (r) => r.vaccinator_name },
     { header: 'رقم التشغيلة', flex: 1.2, render: (r) => r.batch_number },
-    { header: 'تاريخ الدفعة', flex: 1, render: (r) => r.batch_delivery_date || '-' }
+    { header: 'تاريخ دخول الطلبية', flex: 1, render: (r) => r.batch_delivery_date || '-' }
   )
 
   return (
@@ -303,7 +303,7 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
           <DetailRow label="تاريخ التطعيم" value={record.vaccination_date} />
           <DetailRow label="القائم بالتطعيم" value={record.vaccinator_name} />
           <DetailRow label="رقم التشغيلة" value={record.batch_number} />
-          <DetailRow label="تاريخ دخول الدفعة" value={record.batch_delivery_date || '-'} />
+          <DetailRow label="تاريخ دخول الطلبية" value={record.batch_delivery_date || '-'} />
           <DetailRow label="تاريخ الصلاحية" value={record.batch_expiry_date ?? ''} />
           <DetailRow
             label="الحالة"
@@ -347,7 +347,7 @@ export function BatchesReportPdf({ rows, totals, isMinistry, dateRange, hospital
   if (isMinistry) columns.push({ header: 'المستشفى', flex: 1.6, render: (r) => r.hospital_name || '-' })
   columns.push(
     { header: 'رقم التشغيلة', flex: 1.4, render: (r) => r.batch_number },
-    { header: 'تاريخ الدخول', flex: 1.2, render: (r) => r.delivery_date },
+    { header: 'تاريخ دخول الطلبية', flex: 1.2, render: (r) => r.delivery_date },
     { header: 'تاريخ الصلاحية', flex: 1.2, render: (r) => r.expiry_date },
     { header: 'الوارد', flex: 1, render: (r) => String(r.received) },
     { header: 'المستخدم', flex: 1, render: (r) => String(r.used) },

@@ -93,7 +93,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
       return
     }
     if (selectedBatch && vaccinationDate < selectedBatch.delivery_date) {
-      setError(`تاريخ التطعيم (${vaccinationDate}) لا يمكن أن يسبق تاريخ دخول الدفعة (${selectedBatch.delivery_date}).`)
+      setError(`تاريخ التطعيم (${vaccinationDate}) لا يمكن أن يسبق تاريخ دخول الطلبية (${selectedBatch.delivery_date}).`)
       setLoading(false)
       return
     }

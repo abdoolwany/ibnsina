@@ -2,9 +2,10 @@ import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getBatchBalance } from '@/lib/db/batches'
+import { getVerifiedRecordsByHospitals } from '@/lib/db/children'
 import BatchForm from './BatchForm'
 import BatchListTable from './BatchListTable'
-import Link from 'next/link'
+import ReopenVerificationList from '@/components/ReopenVerificationList'
 
 export default async function MohLevel1Page() {
   const user = await getCurrentUser()
@@ -13,15 +14,18 @@ export default async function MohLevel1Page() {
   const hospitals = await getAllHospitals()
   const linkedHospitals = hospitals.filter(h => user.hospitalIds.includes(h.id))
 
-  const hospitalData = await Promise.all(
-    linkedHospitals.map(async h => {
-      const balances = await getBatchBalance(h.id)
-      const totalDelivered = balances.reduce((s, b) => s + b.total_quantity, 0)
-      const used = balances.reduce((s, b) => s + b.used_quantity, 0)
-      const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
-      return { ...h, balances, totalDelivered, used, remaining }
-    })
-  )
+  const [hospitalData, verifiedRecords] = await Promise.all([
+    Promise.all(
+      linkedHospitals.map(async h => {
+        const balances = await getBatchBalance(h.id)
+        const totalDelivered = balances.reduce((s, b) => s + b.total_quantity, 0)
+        const used = balances.reduce((s, b) => s + b.used_quantity, 0)
+        const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
+        return { ...h, balances, totalDelivered, used, remaining }
+      })
+    ),
+    getVerifiedRecordsByHospitals(user.hospitalIds),
+  ])
 
   return (
     <DashboardShell allowedRoles={['moh_level1']}>
@@ -55,6 +59,8 @@ export default async function MohLevel1Page() {
             <BatchListTable balances={h.balances} />
           </div>
         ))}
+
+        <ReopenVerificationList records={verifiedRecords} />
       </div>
     </DashboardShell>
   )

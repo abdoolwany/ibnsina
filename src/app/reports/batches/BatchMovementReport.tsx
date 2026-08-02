@@ -84,7 +84,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const excelColumns = [
     ...(isMinistry ? [{ header: 'المستشفى', key: 'hospital_name', width: 20 }] : []),
     { header: 'رقم التشغيلة', key: 'batch_number', width: 16 },
-    { header: 'تاريخ الدخول', key: 'delivery_date', width: 14 },
+    { header: 'تاريخ دخول الطلبية', key: 'delivery_date', width: 14 },
     { header: 'تاريخ الصلاحية', key: 'expiry_date', width: 14 },
     { header: 'الوارد', key: 'received', width: 10 },
     { header: 'المستخدم', key: 'used', width: 10 },
@@ -130,12 +130,12 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
       <form onSubmit={handleSearch} className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">من تاريخ (دخول التشغيلة)</label>
+            <label className="block text-sm font-medium text-gray-700">من تاريخ (دخول الطلبية)</label>
             <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">إلى تاريخ (دخول التشغيلة)</label>
+            <label className="block text-sm font-medium text-gray-700">إلى تاريخ (دخول الطلبية)</label>
             <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
@@ -170,7 +170,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
       )}
 
       {rows.length === 0 && !loading && !error && (
-        <p className="text-center text-gray-500 py-8">حدد الفترة الزمنية واضغط "عرض التقرير"</p>
+        <p className="text-center text-gray-500 py-8">حدد الفترة الزمنية واضغط &quot;عرض التقرير&quot;</p>
       )}
 
       {rows.length > 0 && (
@@ -199,7 +199,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
                 <tr className="bg-gray-50 border-b text-right">
                   {isMinistry && <th className="py-3 px-3">المستشفى</th>}
                   <th className="py-3 px-3">رقم التشغيلة</th>
-                  <th className="py-3 px-3">تاريخ الدخول</th>
+                  <th className="py-3 px-3">تاريخ دخول الطلبية</th>
                   <th className="py-3 px-3">تاريخ الصلاحية</th>
                   <th className="py-3 px-3">الوارد</th>
                   <th className="py-3 px-3">المستخدم</th>

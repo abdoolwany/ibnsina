@@ -125,7 +125,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
     { header: 'تاريخ التطعيم', key: 'vaccination_date', width: 14 },
     { header: 'القائم بالتطعيم', key: 'vaccinator_name', width: 18 },
     { header: 'رقم التشغيلة', key: 'batch_number', width: 14 },
-    { header: 'تاريخ الدفعة', key: 'batch_delivery_date', width: 14 },
+    { header: 'تاريخ دخول الطلبية', key: 'batch_delivery_date', width: 14 },
   ]
 
   async function handleExportExcel() {
@@ -314,7 +314,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds }: Pro
                   <th className="py-3 px-3">تاريخ التطعيم</th>
                   <th className="py-3 px-3">القائم بالتطعيم</th>
                   <th className="py-3 px-3">رقم التشغيلة</th>
-                  <th className="py-3 px-3">تاريخ الدفعة</th>
+                  <th className="py-3 px-3">تاريخ دخول الطلبية</th>
                   {isMinistry && <th className="py-3 px-3 print:hidden">الحالة</th>}
                   <th className="py-3 px-3 print:hidden">سجل فردي</th>
                 </tr>

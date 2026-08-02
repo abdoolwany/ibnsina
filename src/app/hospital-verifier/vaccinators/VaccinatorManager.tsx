@@ -57,6 +57,39 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
     }
   }
 
+  // حذف ذكي: إن كان الاسم مسجّلًا على أطفال يُوقف فقط (يُزال من خيارات الإدخال مع بقاء السجل التاريخي)،
+  // وإن لم يكن مستخدمًا يُحذف نهائيًا.
+  async function handleDelete(v: Vaccinator) {
+    setError("")
+    const { count } = await supabase
+      .from('child_vaccination_records')
+      .select('id', { count: 'exact', head: true })
+      .eq('vaccinator_id', v.id)
+      .eq('is_deleted', false)
+
+    if (count && count > 0) {
+      const ok = window.confirm(
+        `«${v.full_name}» مسجّل على ${count} طفل. لن يُحذف من السجلات التاريخية، لكن سيُزال من خيارات الإدخال. هل تريد المتابعة؟`
+      )
+      if (!ok) return
+      const { error } = await supabase
+        .from('vaccinators')
+        .update({ is_active: false } as never)
+        .eq('id', v.id)
+      if (error) setError(error.message)
+      else router.refresh()
+    } else {
+      const ok = window.confirm(`حذف نهائي لـ «${v.full_name}»؟ لا يوجد أي طفل مسجّل تحت اسمه.`)
+      if (!ok) return
+      const { error } = await supabase
+        .from('vaccinators')
+        .delete()
+        .eq('id', v.id)
+      if (error) setError(error.message)
+      else router.refresh()
+    }
+  }
+
   return (
     <div className="space-y-4">
       <form onSubmit={handleAdd} className="card p-4 flex gap-3">
@@ -88,12 +121,13 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
               <th className="py-3 px-4 font-semibold">الاسم</th>
               <th className="py-3 px-4 font-semibold">الحالة</th>
               <th className="py-3 px-4 font-semibold"></th>
+              <th className="py-3 px-4 font-semibold"></th>
             </tr>
           </thead>
           <tbody>
             {vaccinators.length === 0 ? (
               <tr>
-                <td colSpan={3} className="py-8 text-center text-gray-500">
+                <td colSpan={4} className="py-8 text-center text-gray-500">
                   لا يوجد قائمون بالتطعيم بعد
                 </td>
               </tr>
@@ -113,6 +147,14 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
                       className={`text-sm px-3 py-1 rounded ${v.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                     >
                       {v.is_active ? 'إيقاف' : 'تفعيل'}
+                    </button>
+                  </td>
+                  <td className="py-3 px-4">
+                    <button
+                      onClick={() => handleDelete(v)}
+                      className="text-sm px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700"
+                    >
+                      حذف
                     </button>
                   </td>
                 </tr>

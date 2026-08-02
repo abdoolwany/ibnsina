@@ -114,7 +114,7 @@ export default function ChildRecordView({ record }: { record: ChildRecordViewDat
             <Row label="تاريخ التطعيم" value={record.vaccination_date} />
             <Row label="القائم بالتطعيم" value={record.vaccinators?.full_name ?? ''} />
             <Row label="رقم التشغيلة" value={record.vaccine_batches?.batch_number ?? ''} />
-            <Row label="تاريخ دخول الدفعة" value={record.vaccine_batches?.delivery_date ?? ''} />
+            <Row label="تاريخ دخول الطلبية" value={record.vaccine_batches?.delivery_date ?? ''} />
             <Row label="تاريخ الصلاحية" value={record.vaccine_batches?.expiry_date ?? ''} />
           </Section>
         </div>

@@ -1,9 +1,9 @@
 import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
-import { getChildrenByHospital } from '@/lib/db/children'
+import { getChildrenByHospital, getAllVerifiedRecords } from '@/lib/db/children'
 import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
-import Link from 'next/link'
+import ReopenVerificationList from '@/components/ReopenVerificationList'
 
 export default async function MohAdminPage() {
   const user = await getCurrentUser()
@@ -11,18 +11,20 @@ export default async function MohAdminPage() {
 
   const hospitals = await getAllHospitals()
 
-  const hospitalData = await Promise.all(
-    hospitals.map(async h => {
-      const batches = await getBatchesByHospital(h.id)
-      const children = await getChildrenByHospital(h.id)
-      const balances = await getBatchBalance(h.id)
-      const totalDelivered = batches.reduce((s, b) => s + b.quantity, 0)
-      const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
-      const verified = children.filter(c => c.is_verified).length
-      return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
-    })
-  )
-
+  const [hospitalData, verifiedRecords] = await Promise.all([
+    Promise.all(
+      hospitals.map(async h => {
+        const batches = await getBatchesByHospital(h.id)
+        const children = await getChildrenByHospital(h.id)
+        const balances = await getBatchBalance(h.id)
+        const totalDelivered = batches.reduce((s, b) => s + b.quantity, 0)
+        const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
+        const verified = children.filter(c => c.is_verified).length
+        return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
+      })
+    ),
+    getAllVerifiedRecords(),
+  ])
   const totals = hospitalData.reduce(
     (s, h) => ({
       children: s.children + h.childrenCount,
@@ -102,6 +104,8 @@ export default async function MohAdminPage() {
             </tbody>
           </table>
         </div>
+
+      <ReopenVerificationList records={verifiedRecords} />
       </div>
     </DashboardShell>
   )

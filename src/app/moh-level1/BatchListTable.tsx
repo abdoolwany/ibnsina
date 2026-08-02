@@ -57,7 +57,7 @@ export default function BatchListTable({ balances }: { balances: BatchBalanceVie
               <tr className="border-b text-right">
                 <th className="py-2 px-3">رقم التشغيلة</th>
                 <th className="py-2 px-3">الكمية</th>
-                <th className="py-2 px-3">تاريخ التسليم</th>
+                <th className="py-2 px-3">تاريخ دخول الطلبية</th>
                 <th className="py-2 px-3">تاريخ الصلاحية</th>
                 <th className="py-2 px-3">المستخدم</th>
                 <th className="py-2 px-3">المتبقي</th>

@@ -19,7 +19,7 @@ export default async function VaccinatorsPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold">إدارة القائمين بالتطعيم</h2>
-        <p className="text-gray-600">إضافة أو إيقاف القائمين بالتطعيم (لا يتم حذف السجل التاريخي)</p>
+        <p className="text-gray-600">إضافة أو إيقاف أو حذف القائمين بالتطعيم (الحذف لا يمس السجل التاريخي لمن سبق أن طعّم)</p>
       </div>
 
       <VaccinatorManager vaccinators={vaccinators} hospitalId={hospitalId} userId={user.id} />

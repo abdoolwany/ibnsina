@@ -43,8 +43,8 @@ export default function LoginForm() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4" dir="rtl">
       <div className="w-full max-w-md space-y-6 rounded-xl bg-white p-8 shadow-lg">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">نظام تتبع تطعيم كبدي B للأطفال حديثي الولادة</h1>
-          <p className="mt-2 text-sm text-gray-500">وزارة الصحة - جمهورية مصر العربية</p>
+          <h1 className="text-2xl font-bold text-gray-900">منظومة تطعيم الكبدي B للرضع</h1>
+          <p className="mt-2 text-sm text-gray-500">الإدارة الصحية بالعاشر من رمضان</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">

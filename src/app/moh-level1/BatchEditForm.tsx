@@ -23,11 +23,11 @@ export default function BatchEditForm({ batch }: { batch: VaccineBatch }) {
     const today = cairoToday()
 
     if (deliveryDate > today) {
-      setError(`تاريخ التسليم (${deliveryDate}) لا يمكن أن يكون بعد اليوم (${today}).`)
+      setError(`تاريخ دخول الطلبية (${deliveryDate}) لا يمكن أن يكون بعد اليوم (${today}).`)
       return
     }
     if (expiryDate < deliveryDate) {
-      setError("تاريخ الصلاحية لا يمكن أن يسبق تاريخ التسليم.")
+      setError("تاريخ الصلاحية لا يمكن أن يسبق تاريخ دخول الطلبية.")
       return
     }
 
@@ -79,7 +79,7 @@ export default function BatchEditForm({ batch }: { batch: VaccineBatch }) {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">تاريخ التسليم</label>
+          <label className="block text-sm font-medium text-gray-700">تاريخ دخول الطلبية</label>
           <input
             type="date"
             required
