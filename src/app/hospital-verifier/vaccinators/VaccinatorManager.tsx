@@ -60,9 +60,9 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
     }
   }
 
-  // حذف = إخفاء: يُوقف الاسم (is_active=false) فيُختفى من القائمة وخيارات الإدخال،
+  // إخفاء: يُوقف الاسم (is_active=false) فيُختفى من القائمة وخيارات الإدخال،
   // مع بقائه كاملًا في السجلات التاريخية لأي طفل سبق أن سُجِّل باسمه.
-  async function handleDelete(v: Vaccinator) {
+  async function handleHide(v: Vaccinator) {
     setError("")
     const ok = window.confirm(
       `إخفاء «${v.full_name}» من قائمة القائمين بالتطعيم؟\nلن يُحذف أي سجل تاريخي باسمه، ويمكن إظهاره مجددًا من خيار «عرض الموقوفين».`
@@ -74,6 +74,25 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
       .eq('id', v.id)
     if (error) setError(error.message)
     else router.refresh()
+  }
+
+  // حذف نهائي: يسمح به فقط لو لم يكن الاسم مرتبطًا بأي سجل أطفال (تفرضه قاعدة البيانات نفسها
+  // عبر سياسة verifier_delete_vaccinators)، عكس الإخفاء الذي يحفظ السجل التاريخي.
+  async function handleDelete(v: Vaccinator) {
+    setError("")
+    const ok = window.confirm(
+      `حذف «${v.full_name}» نهائيًا من قائمة القائمين بالتطعيم؟\n(لا يمكن الحذف إذا كان الاسم مرتبطًا بسجلات أطفال — وفي هذه الحالة استخدم «إخفاء».)`
+    )
+    if (!ok) return
+    const { error } = await supabase
+      .from('vaccinators')
+      .delete()
+      .eq('id', v.id)
+    if (error) {
+      setError(`لا يمكن حذف «${v.full_name}» لأنه مرتبط بسجلات تطعيم محفوظة. استخدم «إخفاء» للحفاظ على السجل التاريخي.`)
+    } else {
+      router.refresh()
+    }
   }
 
   return (
@@ -118,14 +137,13 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
             <tr className="bg-gray-50 border-b text-right">
               <th className="py-3 px-4 font-semibold">الاسم</th>
               <th className="py-3 px-4 font-semibold">الحالة</th>
-              <th className="py-3 px-4 font-semibold"></th>
-              <th className="py-3 px-4 font-semibold"></th>
+              <th className="py-3 px-4 font-semibold">إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-gray-500">
+                <td colSpan={3} className="py-8 text-center text-gray-500">
                   {showInactive ? 'لا يوجد قائمون موقوفون' : 'لا يوجد قائمون بالتطعيم بعد'}
                 </td>
               </tr>
@@ -140,24 +158,30 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
                     }
                   </td>
                   <td className="py-3 px-4">
-                    {!v.is_active && (
-                      <button
-                        onClick={() => handleToggle(v.id, v.is_active)}
-                        className="text-sm px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200"
-                      >
-                        تفعيل
-                      </button>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    {v.is_active && (
+                    <div className="flex gap-2">
+                      {!v.is_active && (
+                        <button
+                          onClick={() => handleToggle(v.id, v.is_active)}
+                          className="text-sm px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200"
+                        >
+                          تفعيل
+                        </button>
+                      )}
+                      {v.is_active && (
+                        <button
+                          onClick={() => handleHide(v)}
+                          className="text-sm px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700"
+                        >
+                          إخفاء
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(v)}
-                        className="text-sm px-3 py-1 rounded bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700"
+                        className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200"
                       >
-                        إخفاء
+                        حذف نهائي
                       </button>
-                    )}
+                    </div>
                   </td>
                 </tr>
               ))

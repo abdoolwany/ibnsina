@@ -19,7 +19,7 @@ export default async function VaccinatorsPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h2 className="text-2xl font-bold">إدارة القائمين بالتطعيم</h2>
-        <p className="text-gray-600">إضافة أو إخفاء القائمين بالتطعيم. الإخفاء يزيل الاسم من القائمة وخيارات الإدخال مع بقاء سجله التاريخي كاملًا، ويمكن إظهاره مجددًا عبر «عرض الموقوفين».</p>
+        <p className="text-gray-600">إضافة أو إخفاء القائمين بالتطعيم. الإخفاء يزيل الاسم من القائمة وخيارات الإدخال مع بقاء سجله التاريخي كاملًا، ويمكن إظهاره مجددًا عبر «عرض الموقوفين». الحذف النهائي متاح فقط للأسماء غير المرتبطة بسجلات أطفال.</p>
       </div>
 
       <VaccinatorManager vaccinators={vaccinators} hospitalId={hospitalId} userId={user.id} />
