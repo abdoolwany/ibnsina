@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
+import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from '@/lib/time'
 
 export async function GET(request: Request) {
   const supabase = await createServerSupabase()
@@ -24,6 +25,21 @@ export async function GET(request: Request) {
 
   const linksResult = await (supabase.from('user_hospital_links').select('hospital_id') as never) as { data: Array<{ hospital_id: string }> | null }
   const userHospitalIds = linksResult.data?.map(l => l.hospital_id) ?? []
+
+  // منع التقرير الفارغ: يلزم تاريخ أو رقم تشغيلة أو مستشفى محدد لتقليل الحمل على الخادم
+  const hasCriteria = !!(dateFrom || dateTo || (hospitalId && role === 'moh_admin') || (batchNumber && batchNumber.trim()))
+  if (!hasCriteria) {
+    return NextResponse.json({
+      error: 'يجب إدخال معيار واحد على الأقل لعرض التقرير (تاريخ محدد أو رقم تشغيلة أو مستشفى)',
+    }, { status: 400 })
+  }
+
+  // الحد الأقصى لمدة البحث شهر واحد (30 يومًا)
+  if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+    return NextResponse.json({
+      error: `الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`,
+    }, { status: 400 })
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query: any = supabase

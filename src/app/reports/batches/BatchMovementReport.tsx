@@ -5,6 +5,7 @@ import type { UserRole, Hospital } from "@/types/database"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import { BatchesReportPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { cairoToday } from "@/lib/time"
+import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from "@/lib/time"
 
 interface BatchMovementRow {
   batch_id: string
@@ -39,8 +40,20 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
 
   const runSearch = useCallback(async (showEmptied: boolean) => {
-    setLoading(true)
     setError("")
+
+    // منع التقرير الفارغ: يلزم تاريخ أو رقم تشغيلة أو مستشفى محدد لتقليل الحمل على الخادم
+    const hasCriteria = Boolean(dateFrom || dateTo || hospitalId || batchNumber.trim())
+    if (!hasCriteria) {
+      setError("يجب إدخال معيار واحد على الأقل لعرض التقرير (تاريخ محدد أو رقم تشغيلة أو مستشفى)")
+      return
+    }
+    if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+      setError(`الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`)
+      return
+    }
+
+    setLoading(true)
 
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)

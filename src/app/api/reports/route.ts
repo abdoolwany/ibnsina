@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabase } from '@/lib/supabase/server'
-import { cairoDayStartUtc, cairoDayEndExclusiveUtc } from '@/lib/time'
+import { cairoDayStartUtc, cairoDayEndExclusiveUtc, MAX_REPORT_RANGE_DAYS, dateRangeDays } from '@/lib/time'
 
 // صف مُعاد من RPC search_child_records (حقول السجل + أسماء المستشفى والقائم بالتطعيم
 // والتشغيلة + أحدث حالة لطلب إعادة فتح التوثيق إن وُجد)
@@ -63,6 +63,35 @@ export async function GET(request: Request) {
   const role = profileResult.data?.role
   if (!role) {
     return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  }
+
+  // منع البحث الفارغ (القسم 9): يلزم معيار بحث واحد على الأقل لتقليل الحمل على الخادم
+  // ولأي دور غير moh_admin لا تُمرَّر hospital_id، لذا لا تُحسب ضمن المعايير إلا للمدير.
+  const hasCriteria = !!(dateFrom || dateTo || (hospitalId && role === 'moh_admin')
+    || searchParams.get('child_name')
+    || searchParams.get('father_name')
+    || searchParams.get('father_grandfather')
+    || searchParams.get('mother_name')
+    || searchParams.get('mother_grandfather')
+    || searchParams.get('father_national_id')
+    || searchParams.get('mother_national_id')
+    || searchParams.get('father_passport')
+    || searchParams.get('mother_passport')
+    || searchParams.get('father_phone')
+    || searchParams.get('mother_phone')
+    || searchParams.get('batch_number'))
+
+  if (!hasCriteria) {
+    return NextResponse.json({
+      error: 'يجب إدخال معيار بحث واحد على الأقل لعرض التقرير (تاريخ محدد، اسم، رقم قومي، رقم تشغيلة...)',
+    }, { status: 400 })
+  }
+
+  // الحد الأقصى لمدة البحث شهر واحد (30 يومًا) بين تاريخي البداية والنهاية
+  if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+    return NextResponse.json({
+      error: `الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`,
+    }, { status: 400 })
   }
 
   // معاملات RPC البحث المتقدم — تُجمع كل القيم المُدخلة بـ AND (راجع القسم 3/9 من المواصفات).

@@ -72,3 +72,13 @@ export function formatCairoDateTime(iso: string | null | undefined): string {
   const p = cairoParts(new Date(iso))
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`
 }
+
+// الحد الأقصى لمدة البحث في التقارير (القسم 9): شهر واحد
+export const MAX_REPORT_RANGE_DAYS = 30
+
+/** عدد الأيام بين تاريخين نصيين (YYYY-MM-DD) — للتحقق من الحد الأقصى لمدة البحث */
+export function dateRangeDays(dateFrom: string, dateTo: string): number {
+  const from = new Date(`${dateFrom}T00:00:00Z`).getTime()
+  const to = new Date(`${dateTo}T00:00:00Z`).getTime()
+  return Math.round((to - from) / 86400000)
+}

@@ -1,4 +1,5 @@
 // التحقق من صحة الرقم القومي المصري حسب القسم 10 من المواصفات
+import { cairoToday } from '@/lib/time'
 
 // قائمة أكواد المحافظات للتحقق (تنبيه فقط وليس رفض)
 const GOVERNORATE_CODES = new Set([
@@ -66,6 +67,14 @@ export function validateEgyptianNationalId(id: string): NationalIdValidationResu
     return result
   }
   result.birthDay = day
+
+  // تاريخ الميلاد المستنتج لا يجوز أن يكون بعد اليوم (القاهرة):
+  // مثال مرفوض: القرن 3 + سنة 95 = 2095 وهو مستقبل — يمنع الحفظ نهائيًا.
+  const birthDateStr = `${result.birthYear}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  if (birthDateStr > cairoToday()) {
+    result.errors.push(`تاريخ الميلاد المستنتج من الرقم (${birthDateStr}) بعد اليوم (${cairoToday()}) — تأكد من صحة الرقم`)
+    return result
+  }
 
   // كود المحافظة: الخانتان 8-9 (تنبيه فقط)
   const govCode = id.substring(7, 9)

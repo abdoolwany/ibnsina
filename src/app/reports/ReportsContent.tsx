@@ -11,6 +11,7 @@ import {
   type ChildReportRow,
 } from "@/lib/reports/pdfDocuments"
 import { cairoToday } from "@/lib/time"
+import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from "@/lib/time"
 
 interface ChildRecord {
   id: string
@@ -83,11 +84,32 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
   const isVerifier = userRole === 'hospital_verifier'
+  // المدخل والموثق يديران سجلات مستشفاهما غير الموثقة من شاشة النتائج مباشرة
+  const canManageChild = userRole === 'hospital_entry' || userRole === 'hospital_verifier'
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault()
-    setLoading(true)
     setError("")
+
+    // منع البحث الفارغ: يلزم معيار واحد على الأقل لتقليل الحمل على الخادم (القسم 9)
+    const hasCriteria = Boolean(
+      dateFrom || dateTo || hospitalId ||
+      childName.trim() || fatherName.trim() || fatherGrandfather.trim() ||
+      motherName.trim() || motherGrandfather.trim() ||
+      fatherNationalId.trim() || motherNationalId.trim() ||
+      fatherPassport.trim() || motherPassport.trim() ||
+      fatherPhone.trim() || motherPhone.trim() || batchNumber.trim()
+    )
+    if (!hasCriteria) {
+      setError("يجب إدخال معيار بحث واحد على الأقل لعرض التقرير (تاريخ محدد، اسم، رقم قومي، رقم تشغيلة...)")
+      return
+    }
+    if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+      setError(`الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`)
+      return
+    }
+
+    setLoading(true)
 
     const params = new URLSearchParams()
     if (dateFrom) params.set('date_from', dateFrom)
@@ -166,6 +188,36 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
 
   function handlePrint() {
     window.print()
+  }
+
+  // حذف سجل غير موثق من نتائج البحث (للمدخل والموثق) — يمنعه RLS للسجلات الموثقة
+  async function handleDeleteRecord(r: ChildRecord) {
+    if (!window.confirm(`تحذير: سيتم حذف سجل الطفل «${r.child_full_name}» نهائيًا وستُرجَع جرعته إلى رصيد الدفعة. هل أنت متأكد؟`)) return
+    setError("")
+    try {
+      const supabase = createClient()
+      const { error } = await supabase.from('child_vaccination_records').delete().eq('id', r.id)
+      if (error) throw new Error(error.message)
+      const genderDelta = r.child_gender === 'male' ? 'male' : 'female'
+      setRecords(prev => prev.filter(x => x.id !== r.id))
+      setStats(prev => {
+        if (!prev) return prev
+        const byHospital = prev.byHospital.map(h =>
+          h.hospital_id === r.hospital_id
+            ? { ...h, total: h.total - 1, male: h.male - (genderDelta === 'male' ? 1 : 0), female: h.female - (genderDelta === 'female' ? 1 : 0) }
+            : h
+        )
+        return {
+          ...prev,
+          total: prev.total - 1,
+          male: prev.male - (genderDelta === 'male' ? 1 : 0),
+          female: prev.female - (genderDelta === 'female' ? 1 : 0),
+          byHospital,
+        }
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'فشل حذف السجل')
+    }
   }
 
   // تحويل سجلات النتائج الحالية إلى صيغة التصدير الموحدة
@@ -476,7 +528,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
                   <th className="py-3 px-3">القائم بالتطعيم</th>
                   <th className="py-3 px-3">رقم التشغيلة</th>
                   <th className="py-3 px-3">تاريخ دخول الطلبية</th>
-                  {isMinistry && <th className="py-3 px-3 print:hidden">الحالة</th>}
+                  {(isMinistry || canManageChild) && <th className="py-3 px-3 print:hidden">الحالة</th>}
                   <th className="py-3 px-3 print:hidden">سجل فردي</th>
                   {isVerifier && <th className="py-3 px-3 print:hidden">إعادة فتح التوثيق</th>}
                 </tr>
@@ -495,7 +547,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
                     <td className="py-2 px-3">{r.vaccinators?.full_name ?? '-'}</td>
                     <td className="py-2 px-3">{r.vaccine_batches?.batch_number ?? '-'}</td>
                     <td className="py-2 px-3">{r.vaccine_batches?.delivery_date ?? '-'}</td>
-                    {isMinistry && (
+                    {(isMinistry || canManageChild) && (
                       <td className="py-2 px-3 print:hidden">
                         {r.is_verified
                           ? <span className="badge badge-success">موثق</span>
@@ -504,10 +556,26 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
                       </td>
                     )}
                     <td className="py-2 px-3 print:hidden">
-                      <Link href={`/reports/child/${r.id}`} target="_blank"
-                        className="text-primary hover:text-primary-dark text-sm">
-                        سجل فردي
-                      </Link>
+                      <div className="flex flex-col gap-1 items-start">
+                        <Link href={`/reports/child/${r.id}`} target="_blank"
+                          className="text-primary hover:text-primary-dark text-sm">
+                          سجل فردي
+                        </Link>
+                        {canManageChild && !r.is_verified && (
+                          <div className="flex gap-2">
+                            <Link
+                              href={`${userRole === 'hospital_verifier' ? '/hospital-verifier' : '/hospital-entry'}/${r.id}/edit`}
+                              className="btn-soft px-2 py-0.5 text-xs"
+                            >
+                              تعديل
+                            </Link>
+                            <button type="button" onClick={() => handleDeleteRecord(r)}
+                              className="text-red-600 hover:text-red-800 text-sm">
+                              حذف
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                     {isVerifier && (
                       <td className="py-2 px-3 print:hidden">

@@ -12,6 +12,28 @@ export async function getChildrenByHospital(hospitalId: string): Promise<ChildVa
   return (data ?? []) as ChildVaccinationRecord[]
 }
 
+// عدّادات خفيفة (COUNT فقط دون جلب الصفوف) — تُستخدم في لوحة المدخل بدلًا من جلب كل السجلات
+export async function getChildrenCountByHospital(hospitalId: string): Promise<number> {
+  const supabase = await createServerSupabase()
+  const { count } = await supabase
+    .from('child_vaccination_records')
+    .select('id', { count: 'exact', head: true })
+    .eq('hospital_id', hospitalId)
+    .eq('is_deleted', false)
+  return count ?? 0
+}
+
+export async function getUnverifiedCountByHospital(hospitalId: string): Promise<number> {
+  const supabase = await createServerSupabase()
+  const { count } = await supabase
+    .from('child_vaccination_records')
+    .select('id', { count: 'exact', head: true })
+    .eq('hospital_id', hospitalId)
+    .eq('is_deleted', false)
+    .eq('is_verified', false)
+  return count ?? 0
+}
+
 export async function getChildById(id: string): Promise<ChildVaccinationRecord | null> {
   const supabase = await createServerSupabase()
   const { data } = await supabase
