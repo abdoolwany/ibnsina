@@ -91,21 +91,14 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
     e.preventDefault()
     setError("")
 
-    // منع البحث الفارغ: يلزم معيار واحد على الأقل لتقليل الحمل على الخادم (القسم 9)
-    const hasCriteria = Boolean(
-      dateFrom || dateTo || hospitalId ||
-      childName.trim() || fatherName.trim() || fatherGrandfather.trim() ||
-      motherName.trim() || motherGrandfather.trim() ||
-      fatherNationalId.trim() || motherNationalId.trim() ||
-      fatherPassport.trim() || motherPassport.trim() ||
-      fatherPhone.trim() || motherPhone.trim() || batchNumber.trim()
-    )
-    if (!hasCriteria) {
-      setError("يجب إدخال معيار بحث واحد على الأقل لعرض التقرير (تاريخ محدد، اسم، رقم قومي، رقم تشغيلة...)")
+    // إلزام نطاق تاريخ (بداية ونهاية) لكل بحث (القسم 9): يمنع جلب كميات ضخمة
+    // دون تحديد زمني. باقي الحقول فلاتر اختيارية إضافية.
+    if (!dateFrom || !dateTo) {
+      setError("يجب تحديد تاريخ البداية والنهاية للبحث")
       return
     }
-    if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
-      setError(`الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`)
+    if (dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+      setError(`الحد الأقصى لمدة البحث شهر واحد (بحد أقصى ${MAX_REPORT_RANGE_DAYS} يومًا)`)
       return
     }
 
@@ -311,16 +304,16 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              {dateType === 'birth_date' ? 'من تاريخ الميلاد' : 'من تاريخ الإدخال'}
+              {dateType === 'birth_date' ? 'من تاريخ الميلاد' : 'من تاريخ الإدخال'} *
             </label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            <input type="date" required value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className={textInput} />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              {dateType === 'birth_date' ? 'إلى تاريخ الميلاد' : 'إلى تاريخ الإدخال'}
+              {dateType === 'birth_date' ? 'إلى تاريخ الميلاد' : 'إلى تاريخ الإدخال'} *
             </label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            <input type="date" required value={dateTo} onChange={e => setDateTo(e.target.value)}
               className={textInput} />
           </div>
           <div>
@@ -344,6 +337,10 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
             </div>
           )}
         </div>
+
+        <p className="text-xs text-gray-500 mt-3">
+          * حقلا التاريخ إلزاميان لكل بحث، والحد الأقصى لمدة البحث شهر واحد (بحد أقصى {MAX_REPORT_RANGE_DAYS} يومًا). باقي الحقول اختيارية.
+        </p>
 
         {/* بيانات الطفل */}
         <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الطفل</h4>
@@ -556,24 +553,24 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
                       </td>
                     )}
                     <td className="py-2 px-3 print:hidden">
-                      <div className="flex flex-col gap-1 items-start">
+                      <div className="flex flex-col gap-2 items-start">
                         <Link href={`/reports/child/${r.id}`} target="_blank"
-                          className="text-primary hover:text-primary-dark text-sm">
+                          className="text-primary hover:text-primary-dark text-sm px-1 py-0.5">
                           سجل فردي
                         </Link>
                         {canManageChild && !r.is_verified && (
-                          <div className="flex gap-2">
+                          <>
                             <Link
                               href={`${userRole === 'hospital_verifier' ? '/hospital-verifier' : '/hospital-entry'}/${r.id}/edit`}
-                              className="btn-soft px-2 py-0.5 text-xs"
+                              className="btn-soft px-3 py-1 text-xs"
                             >
                               تعديل
                             </Link>
                             <button type="button" onClick={() => handleDeleteRecord(r)}
-                              className="text-red-600 hover:text-red-800 text-sm">
+                              className="px-3 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50">
                               حذف
                             </button>
-                          </div>
+                          </>
                         )}
                       </div>
                     </td>

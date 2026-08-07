@@ -26,18 +26,18 @@ export async function GET(request: Request) {
   const linksResult = await (supabase.from('user_hospital_links').select('hospital_id') as never) as { data: Array<{ hospital_id: string }> | null }
   const userHospitalIds = linksResult.data?.map(l => l.hospital_id) ?? []
 
-  // منع التقرير الفارغ: يلزم تاريخ أو رقم تشغيلة أو مستشفى محدد لتقليل الحمل على الخادم
-  const hasCriteria = !!(dateFrom || dateTo || (hospitalId && role === 'moh_admin') || (batchNumber && batchNumber.trim()))
-  if (!hasCriteria) {
+  // إلزام نطاق تاريخ (بداية ونهاية) لكل بحث (القسم 9): يمنع جلب كل الدفعات دون تحديد زمني.
+  // رقم التشغيلة والمستشفى فلاتر اختيارية إضافية.
+  if (!dateFrom || !dateTo) {
     return NextResponse.json({
-      error: 'يجب إدخال معيار واحد على الأقل لعرض التقرير (تاريخ محدد أو رقم تشغيلة أو مستشفى)',
+      error: 'يجب تحديد تاريخ البداية والنهاية للبحث',
     }, { status: 400 })
   }
 
-  // الحد الأقصى لمدة البحث شهر واحد (30 يومًا)
-  if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+  // الحد الأقصى لمدة البحث شهر واحد (بحد أقصى 31 يومًا لاستيعاب شهور الـ31 يومًا)
+  if (dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
     return NextResponse.json({
-      error: `الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`,
+      error: `الحد الأقصى لمدة البحث شهر واحد (بحد أقصى ${MAX_REPORT_RANGE_DAYS} يومًا)`,
     }, { status: 400 })
   }
 

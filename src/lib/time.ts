@@ -73,8 +73,9 @@ export function formatCairoDateTime(iso: string | null | undefined): string {
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`
 }
 
-// الحد الأقصى لمدة البحث في التقارير (القسم 9): شهر واحد
-export const MAX_REPORT_RANGE_DAYS = 30
+// الحد الأقصى لمدة البحث في التقارير (القسم 9): شهر واحد، ويُفسَّر بـ 31 يومًا
+// لاستيعاب الشهور التي تتجاوز 30 يومًا (مثال: 1 يناير → 31 يناير أو 1 فبراير)
+export const MAX_REPORT_RANGE_DAYS = 31
 
 /** عدد الأيام بين تاريخين نصيين (YYYY-MM-DD) — للتحقق من الحد الأقصى لمدة البحث */
 export function dateRangeDays(dateFrom: string, dateTo: string): number {

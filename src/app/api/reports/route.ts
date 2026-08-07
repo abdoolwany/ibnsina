@@ -65,32 +65,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
   }
 
-  // منع البحث الفارغ (القسم 9): يلزم معيار بحث واحد على الأقل لتقليل الحمل على الخادم
-  // ولأي دور غير moh_admin لا تُمرَّر hospital_id، لذا لا تُحسب ضمن المعايير إلا للمدير.
-  const hasCriteria = !!(dateFrom || dateTo || (hospitalId && role === 'moh_admin')
-    || searchParams.get('child_name')
-    || searchParams.get('father_name')
-    || searchParams.get('father_grandfather')
-    || searchParams.get('mother_name')
-    || searchParams.get('mother_grandfather')
-    || searchParams.get('father_national_id')
-    || searchParams.get('mother_national_id')
-    || searchParams.get('father_passport')
-    || searchParams.get('mother_passport')
-    || searchParams.get('father_phone')
-    || searchParams.get('mother_phone')
-    || searchParams.get('batch_number'))
-
-  if (!hasCriteria) {
+  // إلزام نطاق تاريخ (بداية ونهاية) لكل بحث (القسم 9): يمنع جلب كميات ضخمة
+  // دون تحديد زمني. باقي الحقول (اسم، رقم قومي، تشغيلة، مستشفى للمدير) فلاتر اختيارية إضافية.
+  if (!dateFrom || !dateTo) {
     return NextResponse.json({
-      error: 'يجب إدخال معيار بحث واحد على الأقل لعرض التقرير (تاريخ محدد، اسم، رقم قومي، رقم تشغيلة...)',
+      error: 'يجب تحديد تاريخ البداية والنهاية للبحث',
     }, { status: 400 })
   }
 
-  // الحد الأقصى لمدة البحث شهر واحد (30 يومًا) بين تاريخي البداية والنهاية
-  if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+  // الحد الأقصى لمدة البحث شهر واحد (بحد أقصى 31 يومًا لاستيعاب شهور الـ31 يومًا)
+  if (dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
     return NextResponse.json({
-      error: `الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`,
+      error: `الحد الأقصى لمدة البحث شهر واحد (بحد أقصى ${MAX_REPORT_RANGE_DAYS} يومًا)`,
     }, { status: 400 })
   }
 

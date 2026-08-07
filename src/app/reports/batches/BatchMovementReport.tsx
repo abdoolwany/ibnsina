@@ -42,14 +42,14 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   const runSearch = useCallback(async (showEmptied: boolean) => {
     setError("")
 
-    // منع التقرير الفارغ: يلزم تاريخ أو رقم تشغيلة أو مستشفى محدد لتقليل الحمل على الخادم
-    const hasCriteria = Boolean(dateFrom || dateTo || hospitalId || batchNumber.trim())
-    if (!hasCriteria) {
-      setError("يجب إدخال معيار واحد على الأقل لعرض التقرير (تاريخ محدد أو رقم تشغيلة أو مستشفى)")
+    // إلزام نطاق تاريخ (بداية ونهاية) لكل بحث (القسم 9): يمنع جلب كل الدفعات دون تحديد زمني.
+    // رقم التشغيلة والمستشفى فلاتر اختيارية إضافية.
+    if (!dateFrom || !dateTo) {
+      setError("يجب تحديد تاريخ البداية والنهاية للبحث")
       return
     }
-    if (dateFrom && dateTo && dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
-      setError(`الحد الأقصى المسموح بين تاريخ البداية والنهاية هو ${MAX_REPORT_RANGE_DAYS} يومًا`)
+    if (dateRangeDays(dateFrom, dateTo) > MAX_REPORT_RANGE_DAYS) {
+      setError(`الحد الأقصى لمدة البحث شهر واحد (بحد أقصى ${MAX_REPORT_RANGE_DAYS} يومًا)`)
       return
     }
 
@@ -154,13 +154,13 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
       <form onSubmit={handleSearch} className="card p-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">من تاريخ (دخول الطلبية)</label>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+            <label className="block text-sm font-medium text-gray-700">من تاريخ (دخول الطلبية) *</label>
+            <input type="date" required value={dateFrom} onChange={e => setDateFrom(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">إلى تاريخ (دخول الطلبية)</label>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+            <label className="block text-sm font-medium text-gray-700">إلى تاريخ (دخول الطلبية) *</label>
+            <input type="date" required value={dateTo} onChange={e => setDateTo(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
@@ -195,6 +195,9 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
             className="btn btn-secondary">
             تفريغ الحقول
           </button>
+          <span className="text-xs text-gray-500">
+            * حقلا التاريخ إلزاميان للبحث، والحد الأقصى لمدة البحث شهر واحد (بحد أقصى {MAX_REPORT_RANGE_DAYS} يومًا)
+          </span>
         </div>
       </form>
 
