@@ -24,6 +24,52 @@ interface Settings {
 
 const FREE_TIER_BYTES = 500 * 1024 * 1024
 
+// أسماء عربية توضيحية لجداول النظام (يُعرض الاسم التقني تحتها دائمًا للمطابقة مع Supabase)
+const TABLE_LABELS: Record<string, string> = {
+  'public.child_vaccination_records': 'سجلات تطعيم الأطفال (الأهم)',
+  'public.deleted_child_vaccination_records': 'أرشيف الجرعات المحذوفة — يمنع عودة الرصيد',
+  'public.vaccine_batches': 'دفعات اللقاح',
+  'public.hospitals': 'المستشفيات',
+  'public.vaccinators': 'القائمون بالتطعيم',
+  'public.user_profiles': 'ملفات المستخدمين (الأدوار)',
+  'public.user_hospital_links': 'ربط المستخدمين بالمستشفيات',
+  'public.audit_log': 'سجل التدقيق — كل العمليات الحساسة',
+  'public.unverify_requests': 'طلبات إعادة فتح التوثيق',
+  'public.system_settings': 'إعدادات النظام',
+  'public.warehouse_shipments': 'شحنات المخزن (غير مستخدم)',
+  'auth.users': 'حسابات المستخدمين (المصادقة)',
+  'auth.refresh_tokens': 'رموز تجديد الجلسات',
+  'auth.sessions': 'جلسات الدخول النشطة',
+  'auth.identities': 'هويات تسجيل الدخول',
+  'auth.one_time_tokens': 'رموز الاستخدام الواحد',
+  'auth.mfa_factors': 'عوامل التحقق الثنائي (MFA)',
+  'auth.mfa_amr_claims': 'بيانات التحقق الثنائي (MFA)',
+  'auth.mfa_challenges': 'تحديات التحقق الثنائي (MFA)',
+  'auth.custom_oauth_providers': 'مزودو تسجيل الدخول الاجتماعي',
+  'auth.oauth_clients': 'عملاء OAuth',
+  'auth.oauth_consents': 'موافقات OAuth',
+  'auth.oauth_authorizations': 'تفويضات OAuth',
+  'auth.oauth_client_states': 'حالات عملاء OAuth',
+  'auth.sso_domains': 'نطاقات SSO',
+  'auth.sso_providers': 'مزودو SSO',
+  'auth.saml_providers': 'مزودو SAML',
+  'auth.saml_relay_states': 'حالات SAML الداخلية',
+  'auth.webauthn_credentials': 'بيانات الدخول الحيوي',
+  'auth.webauthn_challenges': 'تحديات الدخول الحيوي',
+  'auth.flow_state': 'حالات تدفقات المصادقة',
+  'auth.instances': 'بيانات داخلية للمصادقة',
+  'auth.schema_migrations': 'سجل ترحيلات المصادقة',
+  'auth.audit_log_entries': 'سجل تدقيق المصادقة',
+  'storage.objects': 'ملفات التخزين (صور الهويات مؤجلًا)',
+  'storage.buckets': 'حاويات التخزين',
+  'storage.migrations': 'سجل ترحيلات نظام التخزين',
+  'storage.vector_indexes': 'فهارس تخزين داخلية',
+  'storage.buckets_analytics': 'تحليلات تخزين داخلية',
+  'storage.buckets_vectors': 'بيانات تخزين داخلية',
+  'storage.s3_multipart_uploads': 'رفع مقسم (S3)',
+  'storage.s3_multipart_uploads_parts': 'أجزاء الرفع المقسم (S3)',
+}
+
 export default function StorageManager() {
   const [storage, setStorage] = useState<StorageData | null>(null)
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -154,6 +200,25 @@ export default function StorageManager() {
     await loadAll()
   }
 
+  // استعادة المساحة يدويًا (VACUUM FULL) دون حذف أي بيانات
+  async function runVacuumNow() {
+    if (!window.confirm('تنفيذ استعادة المساحة (VACUUM FULL) على الجداول العملياتية؟ لا يحذف أي بيانات، فقط يعيد صفحات الجداول الفارغة للقرص.')) return
+    setBusy(true)
+    setMessage(null)
+    try {
+      const res = await fetch('/api/system/vacuum', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) { setMessage({ ok: false, text: data.error ?? 'خطأ' }); return }
+      const failedCount = data.results.filter((r: { ok: boolean }) => !r.ok).length
+      setMessage({ ok: true, text: `تم استعادة المساحة بنجاح (${data.results.length - failedCount} من ${data.results.length} جدولًا)` })
+      await loadAll()
+    } catch (e) {
+      setMessage({ ok: false, text: e instanceof Error ? e.message : 'خطأ' })
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (loading) return <p className="text-gray-500">جاري تحميل البيانات...</p>
 
   const usedPercent = storage ? Math.min(100, Math.round((storage.total_bytes / FREE_TIER_BYTES) * 1000) / 10) : 0
@@ -198,18 +263,42 @@ export default function StorageManager() {
                 </tr>
               </thead>
               <tbody>
-                {storage.tables.map(t => (
-                  <tr key={`${t.schemaname}.${t.table_name}`} className="border-b hover:bg-gray-50">
-                    <td className="py-2 px-3 font-mono text-xs">{t.schemaname}.{t.table_name}</td>
-                    <td className="py-2 px-3">{t.approx_rows}</td>
-                    <td className="py-2 px-3">{t.size_pretty}</td>
-                  </tr>
-                ))}
+                {storage.tables.map(t => {
+                  const key = `${t.schemaname}.${t.table_name}`
+                  return (
+                    <tr key={key} className="border-b hover:bg-gray-50">
+                      <td className="py-2 px-3">
+                        <div className="text-sm text-gray-800">{TABLE_LABELS[key] ?? t.table_name}</div>
+                        <div className="text-xs text-gray-400 font-mono">{key}</div>
+                      </td>
+                      <td className="py-2 px-3">{t.approx_rows}</td>
+                      <td className="py-2 px-3">{t.size_pretty}</td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            «الصفوف» أرقام تقريبية من إحصائيات PostgreSQL ولا تتحدث فورًا، و«الحجم» يشمل فهارس الجدول.
+            جداول <span className="font-mono">auth.*</span> و<span className="font-mono">storage.*</span> بنية داخلية
+            للمصادقة والتخزين لا تحتاج اهتمامًا. المساحة تُسترد فعليًا بزر «استعادة المساحة» أو بعد الحذف
+            (يحتاج ضبط DATABASE_URL في Vercel).
+          </p>
         </div>
       )}
+
+      {/* استعادة المساحة يدويًا */}
+      <div className="card p-4">
+        <h3 className="font-semibold text-lg mb-1">استعادة المساحة (VACUUM FULL)</h3>
+        <p className="text-xs text-gray-500 mb-3">
+          يعيد كتابة الجداول العملياتية لفرز الصفحات الميتة وإرجاع المساحة للقرص — لا يحذف أي بيانات حية.
+          يتطلب ضبط DATABASE_URL في Vercel (Session Pooler).
+        </p>
+        <button disabled={busy} onClick={runVacuumNow} className="btn btn-warning">
+          استعادة المساحة الآن
+        </button>
+      </div>
 
       {/* 2) حذف سجلات الأطفال بنطاق زمني */}
       <div className="card p-4">
