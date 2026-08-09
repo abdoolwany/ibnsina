@@ -24,11 +24,13 @@ type ReportRow = {
   vaccination_date: string
   batch_id: string
   vaccinator_id: string
+  entered_by: string
   is_verified: boolean
   verified_at: string | null
   created_at: string
   hospital_name: string | null
   vaccinator_name: string | null
+  entered_by_name: string | null
   batch_number: string | null
   batch_delivery_date: string | null
   batch_expiry_date: string | null
@@ -82,13 +84,17 @@ export async function GET(request: Request) {
 
   // معاملات RPC البحث المتقدم — تُجمع كل القيم المُدخلة بـ AND (راجع القسم 3/9 من المواصفات).
   // عزل المستشفيات لا يُطبَّق يدويًا هنا؛ RPC من نوع SECURITY INVOKER فتبقى RLS مطبقة تلقائيًا.
-  // p_hospital_id يُمرَّر فقط للاختيار اليدوي لمستشفى محددة (moh_admin)، ولأي دور آخر تُترك NULL.
+  // p_hospital_id يُمرَّر فقط للاختيار اليدوي لمستشفى محددة (moh_admin أو moh_level1)،
+  // ولأي دور آخر تُترك NULL. مستوى أول محصور بمستشفياته المرتبطة عبر RLS حتى لو مرّر معرفًا.
   const params: Record<string, string | null> = {
     p_birth_from: null,
     p_birth_to: null,
     p_created_from: null,
     p_created_to: null,
-    p_hospital_id: hospitalId && role === 'moh_admin' ? hospitalId : null,
+    p_hospital_id: hospitalId && (role === 'moh_admin' || role === 'moh_level1') ? hospitalId : null,
+    p_nationality: searchParams.get('nationality'),
+    p_vaccinator_id: searchParams.get('vaccinator_id'),
+    p_entered_by: searchParams.get('entered_by'),
     p_child_name: searchParams.get('child_name'),
     p_father_name: searchParams.get('father_name'),
     p_father_grandfather: searchParams.get('father_grandfather'),
@@ -218,11 +224,13 @@ export async function GET(request: Request) {
     vaccination_date: r.vaccination_date,
     batch_id: r.batch_id,
     vaccinator_id: r.vaccinator_id,
+    entered_by: r.entered_by,
     is_verified: r.is_verified,
     verified_at: r.verified_at,
     created_at: r.created_at,
     request_status: r.request_status,
     vaccinators: r.vaccinator_name ? { full_name: r.vaccinator_name } : null,
+    entered_by_name: r.entered_by_name,
     vaccine_batches: r.batch_number ? {
       delivery_date: r.batch_delivery_date ?? '',
       batch_number: r.batch_number,

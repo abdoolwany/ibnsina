@@ -7,6 +7,7 @@ export interface AuthUser {
   role: UserRole | null
   fullName: string | null
   hospitalIds: string[]
+  hospitalNames: string[]
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
@@ -20,8 +21,8 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const profile = profileResult.data as { role: UserRole; full_name: string } | null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const linksResult = await (supabase.from('user_hospital_links').select('hospital_id') as any)
-  const links = linksResult.data as Array<{ hospital_id: string }> | null
+  const linksResult = await (supabase.from('user_hospital_links').select('hospital_id, hospitals(name)') as any)
+  const links = linksResult.data as Array<{ hospital_id: string; hospitals: { name: string } | null }> | null
 
   return {
     id: user.id,
@@ -29,6 +30,7 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
     role: profile?.role ?? null,
     fullName: profile?.full_name ?? null,
     hospitalIds: links?.map(l => l.hospital_id) ?? [],
+    hospitalNames: links?.map(l => l.hospitals?.name ?? '').filter(Boolean) ?? [],
   }
 }
 

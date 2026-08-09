@@ -22,6 +22,19 @@ export async function getActiveVaccinators(hospitalId: string): Promise<Vaccinat
   return (data ?? []) as Vaccinator[]
 }
 
+// لقائمة خيارات فلتر "القائم بالتطعيم" في التقارير — تعيد قائمة موحّدة
+// لكل المستشفيات المرتبطة بالمستخدم (المدخل عبر عدة مستشفيات يحتاجها موحّدة).
+export async function getVaccinatorsByHospitals(hospitalIds: string[]): Promise<Vaccinator[]> {
+  const supabase = await createServerSupabase()
+  if (hospitalIds.length === 0) return []
+  const { data } = await supabase
+    .from('vaccinators')
+    .select('*')
+    .in('hospital_id', hospitalIds)
+    .order('full_name')
+  return (data ?? []) as Vaccinator[]
+}
+
 export async function createVaccinator(
   vaccinator: Omit<Vaccinator, 'id' | 'created_at'>
 ): Promise<Vaccinator> {

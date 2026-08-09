@@ -46,9 +46,11 @@ export default function TopBar({ user }: { user: AuthUser }) {
           <span className="font-bold text-white hidden sm:inline">منظومة تطعيم الكبدي B</span>
         </div>
 
-        {/* اسم النظام الكامل في المنتصف */}
+        {/* اسم النظام الكامل في المنتصف — أو اسم المستشفى لمدخل/موثق البيانات */}
         <h1 className="font-bold text-white text-base sm:text-lg text-center leading-snug">
-          منظومة تتبع توزيع لقاحات الالتهاب الكبدي B
+          {user.role === 'hospital_entry' || user.role === 'hospital_verifier'
+            ? (user.hospitalNames[0] ?? 'المستشفى')
+            : 'منظومة تتبع توزيع لقاحات الالتهاب الكبدي B'}
         </h1>
 
         <div className="flex items-center gap-4 min-w-0">

@@ -51,6 +51,11 @@ function getNavItems(role: string): NavItem[] {
   if (role !== 'system_operator') {
     items.push({ href: '/reports', label: 'التقارير والبحث', icon: FileText, matchExact: true })
     items.push({ href: '/reports/batches', label: 'حركة الطعوم', icon: Activity, matchExact: true })
+    items.push({ href: '/reports/vaccinated-count', label: 'عدد المتطعمين', icon: Users, matchExact: true })
+  }
+
+  if (role === 'moh_level1') {
+    items.push({ href: '/moh-level1/batches/new', label: 'إضافة طلبية جديدة', icon: Syringe, matchExact: true })
   }
 
   if (role !== 'system_operator') {

@@ -1,9 +1,9 @@
+import Link from 'next/link'
 import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getBatchBalance } from '@/lib/db/batches'
 import { getPendingUnverifyRequestsByHospitals } from '@/lib/db/unverifyRequests'
-import BatchForm from './BatchForm'
 import BatchListTable from './BatchListTable'
 import UnverifyRequestsList from '@/components/UnverifyRequestsList'
 
@@ -30,9 +30,12 @@ export default async function MohLevel1Page() {
   return (
     <DashboardShell allowedRoles={['moh_level1']}>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold">لوحة وزارة الصحة - مستوى أول</h2>
-          <p className="text-gray-600">إدارة الشحنات ومراجعة التقارير للمستشفيات المرتبطة</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-2xl font-bold">لوحة وزارة الصحة - مستوى أول</h2>
+            <p className="text-gray-600">إدارة الشحنات ومراجعة التقارير للمستشفيات المرتبطة</p>
+          </div>
+          <Link href="/moh-level1/batches/new" className="btn btn-primary">إضافة طلبية جديدة</Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -46,11 +49,6 @@ export default async function MohLevel1Page() {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="card p-4">
-          <h3 className="text-lg font-semibold mb-4">إضافة دفعة شحن جديدة</h3>
-          <BatchForm hospitals={linkedHospitals} />
         </div>
 
         {hospitalData.map(h => (

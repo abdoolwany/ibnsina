@@ -12,6 +12,7 @@ import {
 } from "@/lib/reports/pdfDocuments"
 import { cairoToday } from "@/lib/time"
 import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from "@/lib/time"
+import { NATIONALITIES, nationalityToFilterParam } from "@/lib/nationalities"
 
 interface ChildRecord {
   id: string
@@ -33,6 +34,8 @@ interface ChildRecord {
   vaccination_date: string
   batch_id: string
   vaccinator_id: string
+  entered_by: string
+  entered_by_name: string | null
   is_verified: boolean
   verified_at: string | null
   created_at: string
@@ -52,9 +55,16 @@ interface HospitalStat {
 
 type SortKey = 'child_name' | 'birth_date' | 'father_name' | 'mother_name' | 'vaccination_date' | 'hospital' | 'created_at'
 
+interface NamedOption {
+  id: string
+  full_name: string
+}
+
 interface Props {
   hospitals: Hospital[]
   userRole: UserRole | null
+  vaccinators: NamedOption[]
+  entryUsers: NamedOption[]
 }
 
 const PAGE_SIZES = [10, 20, 50] as const
@@ -96,7 +106,7 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; tit
   )
 }
 
-export default function ReportsContent({ hospitals, userRole }: Props) {
+export default function ReportsContent({ hospitals, userRole, vaccinators, entryUsers }: Props) {
   const router = useRouter()
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
@@ -114,6 +124,10 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
   const [motherPassport, setMotherPassport] = useState("")
   const [motherPhone, setMotherPhone] = useState("")
   const [batchNumber, setBatchNumber] = useState("")
+  // فلاتر إضافية: الجنسية + القائم بالتطعيم + المدخل (بند إضافي)
+  const [nationalityFilter, setNationalityFilter] = useState<'all' | 'egyptian' | 'non_egyptian' | string>('all')
+  const [vaccinatorId, setVaccinatorId] = useState("")
+  const [enteredBy, setEnteredBy] = useState("")
 
   const [records, setRecords] = useState<ChildRecord[]>([])
   const [stats, setStats] = useState<{ total: number; male: number; female: number; byHospital: HospitalStat[] } | null>(null)
@@ -130,8 +144,8 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
   const [sortBy, setSortBy] = useState<SortKey>('child_name')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
-  // مفتاح "بحث متقدم" + فلترة الحالة
-  const [advancedOpen, setAdvancedOpen] = useState(true)
+  // مفتاح "بحث متقدم" + فلترة الحالة (مغلق افتراضيًا ويُفتح عند الحاجة)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'unverified'>('all')
 
   // كامل النتيجة للطباعة/التصدير (يُحمَّل عند الطلب فقط — بند 5)
@@ -167,6 +181,10 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
     if (motherPassport.trim()) p.set('mother_passport', motherPassport.trim())
     if (motherPhone.trim()) p.set('mother_phone', motherPhone.trim())
     if (batchNumber.trim()) p.set('batch_number', batchNumber.trim())
+    const natParam = nationalityToFilterParam(nationalityFilter)
+    if (natParam) p.set('nationality', natParam)
+    if (vaccinatorId) p.set('vaccinator_id', vaccinatorId)
+    if (enteredBy) p.set('entered_by', enteredBy)
     p.set('status', overrides.status ?? statusFilter)
     p.set('sort_by', overrides.sortBy ?? sortBy)
     p.set('sort_dir', overrides.sortDir ?? sortDir)
@@ -267,6 +285,9 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
     setMotherPassport("")
     setMotherPhone("")
     setBatchNumber("")
+    setNationalityFilter('all')
+    setVaccinatorId("")
+    setEnteredBy("")
     setStatusFilter('all')
     setPage(1)
     setRecords([])
@@ -314,6 +335,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
       mother_national_id: r.mother_national_id,
       vaccination_date: r.vaccination_date,
       vaccinator_name: r.vaccinators?.full_name ?? '',
+      entered_by_name: r.entered_by_name ?? '',
       batch_number: r.vaccine_batches?.batch_number ?? '',
       batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
     }))
@@ -329,6 +351,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
     { header: 'رقم الأم القومي', key: 'mother_national_id', width: 18 },
     { header: 'تاريخ التطعيم', key: 'vaccination_date', width: 14 },
     { header: 'القائم بالتطعيم', key: 'vaccinator_name', width: 18 },
+    { header: 'المدخل', key: 'entered_by_name', width: 18 },
     { header: 'رقم التشغيلة', key: 'batch_number', width: 14 },
     { header: 'تاريخ دخول الطلبية', key: 'batch_delivery_date', width: 14 },
   ]
@@ -427,7 +450,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
               <option value="created_at">تاريخ الإدخال الفعلي</option>
             </select>
           </div>
-          {userRole === 'moh_admin' && (
+          {isMinistry && (
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
               <select value={hospitalId} onChange={e => setHospitalId(e.target.value)}
@@ -475,6 +498,18 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
                 <label className="block text-sm font-medium text-gray-700">اسم الطفل</label>
                 <input type="text" value={childName} onChange={e => setChildName(e.target.value)}
                   className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">الجنسية</label>
+                <select value={nationalityFilter} onChange={e => setNationalityFilter(e.target.value)}
+                  className="input-field">
+                  <option value="all">الكل</option>
+                  <option value="egyptian">مصر</option>
+                  <option value="non_egyptian">غير مصري</option>
+                  {NATIONALITIES.filter(n => !n.startsWith('مصر')).map(n => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -545,6 +580,26 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
                 <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
                 <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
                   className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">القائم بالتطعيم</label>
+                <select value={vaccinatorId} onChange={e => setVaccinatorId(e.target.value)}
+                  className="input-field">
+                  <option value="">الكل</option>
+                  {vaccinators.map(v => (
+                    <option key={v.id} value={v.id}>{v.full_name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">المدخل (أدخل السجل)</label>
+                <select value={enteredBy} onChange={e => setEnteredBy(e.target.value)}
+                  className="input-field">
+                  <option value="">الكل</option>
+                  {entryUsers.map(u => (
+                    <option key={u.id} value={u.id}>{u.full_name}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </>
@@ -658,6 +713,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
                   <th>رقم الأم القومي</th>
                   <SortableTh label="تاريخ التطعيم" sortKey="vaccination_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   <th>القائم بالتطعيم</th>
+                  <th>المدخل</th>
                   <th>رقم التشغيلة</th>
                   <th>تاريخ دخول الطلبية</th>
                   <th>الحالة</th>
@@ -675,6 +731,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
                     <td>{r.mother_national_id ?? '-'}</td>
                     <td>{r.vaccination_date}</td>
                     <td>{r.vaccinators?.full_name ?? '-'}</td>
+                    <td>{r.entered_by_name ?? '-'}</td>
                     <td>{r.vaccine_batches?.batch_number ?? '-'}</td>
                     <td>{r.vaccine_batches?.delivery_date ?? '-'}</td>
                     <td>
@@ -704,6 +761,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
                     <th>رقم الأم القومي</th>
                     <th>تاريخ التطعيم</th>
                     <th>القائم بالتطعيم</th>
+                    <th>المدخل</th>
                     <th>رقم التشغيلة</th>
                     <th>تاريخ دخول الطلبية</th>
                     <th>الحالة</th>
@@ -721,6 +779,7 @@ export default function ReportsContent({ hospitals, userRole }: Props) {
                       <td>{r.mother_national_id ?? '-'}</td>
                       <td>{r.vaccination_date}</td>
                       <td>{r.vaccinators?.full_name ?? '-'}</td>
+                      <td>{r.entered_by_name ?? '-'}</td>
                       <td>{r.vaccine_batches?.batch_number ?? '-'}</td>
                       <td>{r.vaccine_batches?.delivery_date ?? '-'}</td>
                       <td>{r.is_verified ? 'موثّق' : 'غير موثّق'}</td>

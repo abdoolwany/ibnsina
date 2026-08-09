@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
 import { validateEgyptianNationalId, checkGenderConsistency } from "@/lib/validation/national-id"
 import { cairoToday } from "@/lib/time"
+import NationalitySelect from "@/components/NationalitySelect"
 import type { BatchBalanceView, Vaccinator, ChildVaccinationRecord, Gender } from "@/types/database"
 
 interface Props {
@@ -208,8 +209,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">الجنسية</label>
-            <input type="text" value={nationality} onChange={e => setNationality(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+            <NationalitySelect value={nationality} onChange={setNationality} required />
           </div>
         </div>
       </div>

@@ -5,9 +5,9 @@ import { getHospitalById } from '@/lib/db/hospitals'
 import { getVaccinatorsByHospitals } from '@/lib/db/vaccinators'
 import { getEntryUsersByHospitals } from '@/lib/db/users'
 import AppShell from '@/components/AppShell'
-import ReportsContent from './ReportsContent'
+import VaccinatedCountContent from './VaccinatedCountContent'
 
-export default async function ReportsPage() {
+export default async function VaccinatedCountPage() {
   const user = await getCurrentUser()
 
   if (!user || !user.role) {
@@ -28,10 +28,10 @@ export default async function ReportsPage() {
   return (
     <AppShell user={user} maxWidth="max-w-7xl">
       <div className="mb-6">
-        <h2 className="text-2xl font-bold">التقارير والبحث</h2>
-        <p className="text-gray-600">البحث في سجلات الأطفال والتطعيمات</p>
+        <h2 className="text-2xl font-bold">عدد المتطعمين</h2>
+        <p className="text-gray-600">إحصاءات عدد المتطعمين خلال أي مدة دون حدود زمنية</p>
       </div>
-      <ReportsContent
+      <VaccinatedCountContent
         hospitals={hospitals}
         userRole={user.role}
         vaccinators={vaccinators}

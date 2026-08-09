@@ -162,6 +162,7 @@ export interface ChildReportRow {
   mother_national_id: string | null
   vaccination_date: string
   vaccinator_name: string
+  entered_by_name?: string
   batch_number: string
   batch_delivery_date: string
 }
@@ -188,6 +189,7 @@ export function ChildrenReportPdf({ rows, isMinistry, dateRange, hospitalName, t
     { header: 'رقم الأم القومي', flex: 1.4, render: (r) => r.mother_national_id || '-' },
     { header: 'تاريخ التطعيم', flex: 1, render: (r) => r.vaccination_date },
     { header: 'القائم بالتطعيم', flex: 1.3, render: (r) => r.vaccinator_name },
+    { header: 'المدخل', flex: 1.3, render: (r) => r.entered_by_name || '-' },
     { header: 'رقم التشغيلة', flex: 1.2, render: (r) => r.batch_number },
     { header: 'تاريخ دخول الطلبية', flex: 1, render: (r) => r.batch_delivery_date || '-' }
   )
