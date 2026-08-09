@@ -3,8 +3,6 @@
 import { useState } from 'react'
 import type { ElementType } from 'react'
 import { BarChart3 } from 'lucide-react'
-import { NATIONALITIES } from '@/lib/nationalities'
-import { nationalityToFilterParam } from '@/lib/nationalities'
 import type { Hospital } from '@/types/database'
 
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; title: string; subtitle?: string }) {
@@ -44,7 +42,6 @@ export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
   const [hospitalId, setHospitalId] = useState("")
-  const [nationalityFilter, setNationalityFilter] = useState<'all' | 'egyptian' | 'non_egyptian' | string>('all')
 
   const [stats, setStats] = useState<VaccinatedStats | null>(null)
   const [loading, setLoading] = useState(false)
@@ -69,8 +66,6 @@ export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
       p.set('from', from)
       p.set('to', to)
       if (hospitalId) p.set('hospital_id', hospitalId)
-      const natParam = nationalityToFilterParam(nationalityFilter)
-      if (natParam) p.set('nationality', natParam)
 
       const res = await fetch(`/api/reports/vaccinated-count?${p.toString()}`)
       if (!res.ok) {
@@ -90,7 +85,6 @@ export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
     setFrom("")
     setTo("")
     setHospitalId("")
-    setNationalityFilter('all')
     setStats(null)
     setError("")
     setHasSearched(false)
@@ -132,18 +126,6 @@ export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
               </select>
             </div>
           )}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">الجنسية</label>
-            <select value={nationalityFilter} onChange={e => setNationalityFilter(e.target.value)}
-              className="input-field">
-              <option value="all">الكل</option>
-              <option value="egyptian">مصر</option>
-              <option value="non_egyptian">غير مصري</option>
-              {NATIONALITIES.filter(n => !n.startsWith('مصر')).map(n => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         <div className="flex items-center gap-3">

@@ -50,10 +50,12 @@ export function isEgyptianNationality(value: string | null | undefined): boolean
  * تحويل اختيار الجنسية من الواجهة إلى معامل RPC:
  * - null / '' / الكل → null (بدون فلترة)
  * - غير مصري → NON_EGYPTIAN_TOKEN
+ * - "مصر" (الخيار الثابت) → "مصر" (بادئة تطابق "مصري"/"مصرية" المخزنة في قاعدة البيانات)
  * - أي جنسية محددة → اسمها كما هو
  */
 export function nationalityToFilterParam(value: string | null | undefined): string | null {
   if (!value || value === 'all') return null
   if (value === 'non_egyptian') return NON_EGYPTIAN_TOKEN
+  if (value === 'egyptian') return 'مصر'
   return value
 }
