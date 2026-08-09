@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import type { Hospital, UserRole } from "@/types/database"
 
@@ -46,15 +46,23 @@ export default function UserManager({ hospitals, currentUserId, managerRole }: {
 
   const manageableRoles = managerRole === 'system_operator' ? ALL_ROLES : MOH_ADMIN_MANAGED_ROLES
 
-  async function loadUsers() {
+  // جلب البيانات يُعيدها فقط (بدون setState)؛ والتحديث يتم داخل callbacks غير متزامنة
+  // حتى لا يتسبب تحديث الحالة المتزامن داخل الـ effect في إعادة رسم متتالية.
+  const fetchUsers = useCallback(async (): Promise<UserProfile[]> => {
     const res = await fetch('/api/admin/users')
     const data = await res.json()
-    if (!res.ok) { setError(data.error ?? 'خطأ في جلب المستخدمين'); setLoading(false); return }
-    setUsers(data.users ?? [])
-    setLoading(false)
-  }
+    if (!res.ok) throw new Error(data.error ?? 'خطأ في جلب المستخدمين')
+    return data.users ?? []
+  }, [])
 
-  useEffect(() => { loadUsers() }, [])
+  const loadUsers = useCallback(() => {
+    fetchUsers()
+      .then(users => setUsers(users))
+      .catch(err => setError(err instanceof Error ? err.message : 'خطأ في جلب المستخدمين'))
+      .finally(() => setLoading(false))
+  }, [fetchUsers])
+
+  useEffect(() => { loadUsers() }, [loadUsers])
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()

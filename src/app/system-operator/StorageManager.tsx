@@ -91,28 +91,32 @@ export default function StorageManager() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
 
-  const loadAll = useCallback(async () => {
-    setLoading(true)
-    setError("")
-    try {
-      const [stRes, stRes2] = await Promise.all([
-        fetch('/api/system/storage'),
-        fetch('/api/system/settings'),
-      ])
-      if (!stRes.ok) throw new Error((await stRes.json()).error ?? 'فشل في جلب بيانات التخزين')
-      if (!stRes2.ok) throw new Error((await stRes2.json()).error ?? 'فشل في جلب الإعدادات')
-      const st = await stRes.json()
-      const s = await stRes2.json()
-      setStorage(st)
-      setSettings(s)
-      setEnabled(s.auto_cleanup_enabled)
-      setThresholdMb(Math.round(s.auto_cleanup_threshold_bytes / (1024 * 1024)).toString())
-      setDeleteAmount(s.auto_cleanup_delete_amount.toString())
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'خطأ')
-    }
-    setLoading(false)
+  // جلب البيانات يُعيدها فقط (بدون setState)؛ والتحديث يتم داخل callbacks غير متزامنة
+  // حتى لا يتسبب تحديث الحالة المتزامن داخل الـ effect في إعادة رسم متتالية.
+  const fetchAll = useCallback(async () => {
+    const [stRes, stRes2] = await Promise.all([
+      fetch('/api/system/storage'),
+      fetch('/api/system/settings'),
+    ])
+    if (!stRes.ok) throw new Error((await stRes.json()).error ?? 'فشل في جلب بيانات التخزين')
+    if (!stRes2.ok) throw new Error((await stRes2.json()).error ?? 'فشل في جلب الإعدادات')
+    const st = await stRes.json() as StorageData
+    const s = await stRes2.json() as Settings
+    return { st, s }
   }, [])
+
+  const loadAll = useCallback(() => {
+    fetchAll()
+      .then(({ st, s }) => {
+        setStorage(st)
+        setSettings(s)
+        setEnabled(s.auto_cleanup_enabled)
+        setThresholdMb(Math.round(s.auto_cleanup_threshold_bytes / (1024 * 1024)).toString())
+        setDeleteAmount(s.auto_cleanup_delete_amount.toString())
+      })
+      .catch(e => setError(e instanceof Error ? e.message : 'خطأ'))
+      .finally(() => setLoading(false))
+  }, [fetchAll])
 
   useEffect(() => { loadAll() }, [loadAll])
 
