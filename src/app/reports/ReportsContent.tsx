@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useRef } from "react"
-import Link from "next/link"
+import { useState, useRef, useEffect, type ElementType } from "react"
+import { useRouter } from "next/navigation"
+import { Search, Filter, Printer, RotateCcw, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft, Baby } from "lucide-react"
 import type { UserRole, Hospital } from "@/types/database"
-import { createClient } from "@/lib/supabase/client"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import {
   ChildrenReportPdf,
@@ -50,14 +50,54 @@ interface HospitalStat {
   female: number
 }
 
+type SortKey = 'child_name' | 'birth_date' | 'father_name' | 'mother_name' | 'vaccination_date' | 'hospital' | 'created_at'
+
 interface Props {
   hospitals: Hospital[]
   userRole: UserRole | null
-  hospitalIds: string[]
-  userId: string
 }
 
-export default function ReportsContent({ hospitals, userRole, hospitalIds, userId }: Props) {
+const PAGE_SIZES = [10, 20, 50] as const
+
+// رأس عمود قابل للفرز مع سهم الاتجاه (بند 5)
+function SortableTh({
+  label,
+  sortKey,
+  sortBy,
+  sortDir,
+  onSort,
+}: {
+  label: string
+  sortKey: SortKey
+  sortBy: SortKey
+  sortDir: 'asc' | 'desc'
+  onSort: (k: SortKey) => void
+}) {
+  return (
+    <th className="cursor-pointer select-none hover:bg-gray-200/70" onClick={() => onSort(sortKey)}>
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {sortBy === sortKey && <span className="text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span>}
+      </span>
+    </th>
+  )
+}
+
+// شريط عنوان قسم: خلفية تدرّج الأقسام ونص أبيض (بند 4)
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; title: string; subtitle?: string }) {
+  return (
+    <div className="section-header mb-4">
+      <Icon size={18} />
+      <div>
+        <h3 className="font-bold">{title}</h3>
+        {subtitle && <p className="text-xs text-white/90">{subtitle}</p>}
+      </div>
+    </div>
+  )
+}
+
+export default function ReportsContent({ hospitals, userRole }: Props) {
+  const router = useRouter()
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [dateType, setDateType] = useState<'birth_date' | 'created_at'>('birth_date')
@@ -74,25 +114,103 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
   const [motherPassport, setMotherPassport] = useState("")
   const [motherPhone, setMotherPhone] = useState("")
   const [batchNumber, setBatchNumber] = useState("")
+
   const [records, setRecords] = useState<ChildRecord[]>([])
   const [stats, setStats] = useState<{ total: number; male: number; female: number; byHospital: HospitalStat[] } | null>(null)
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState<'' | 'excel' | 'pdf'>('')
-  const [requestingId, setRequestingId] = useState<string | null>(null)
   const [error, setError] = useState("")
+  const [hasSearched, setHasSearched] = useState(false)
+
+  // ترحيل + فرز (بند 5): من جهة الخادم — صفحة 20 افتراضيًا
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number | 'all'>(20)
+  const [total, setTotal] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [sortBy, setSortBy] = useState<SortKey>('child_name')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+
+  // مفتاح "بحث متقدم" + فلترة الحالة
+  const [advancedOpen, setAdvancedOpen] = useState(true)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'unverified'>('all')
+
+  // كامل النتيجة للطباعة/التصدير (يُحمَّل عند الطلب فقط — بند 5)
+  const [printRows, setPrintRows] = useState<ChildRecord[] | null>(null)
+  const [fullLoading, setFullLoading] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
-  const isVerifier = userRole === 'hospital_verifier'
-  // المدخل والموثق يديران سجلات مستشفاهما غير الموثقة من شاشة النتائج مباشرة
-  const canManageChild = userRole === 'hospital_entry' || userRole === 'hospital_verifier'
 
-  async function handleSearch(e: React.FormEvent) {
+  // إفراغ حالة الطباعة بعد انتهاء الطباعة الفعلية
+  useEffect(() => {
+    const clear = () => setPrintRows(null)
+    window.addEventListener('afterprint', clear)
+    return () => window.removeEventListener('afterprint', clear)
+  }, [])
+
+  // بناء معاملات الطلب من حقول النموذج الحالية + خيارات الترحيل/الفرز
+  function buildParams(overrides: { page?: number; pageSize?: number | 'all'; sortBy?: SortKey; sortDir?: 'asc' | 'desc'; status?: typeof statusFilter; full?: boolean }) {
+    const p = new URLSearchParams()
+    if (dateFrom) p.set('date_from', dateFrom)
+    if (dateTo) p.set('date_to', dateTo)
+    if (hospitalId) p.set('hospital_id', hospitalId)
+    p.set('date_type', dateType)
+    if (childName.trim()) p.set('child_name', childName.trim())
+    if (fatherName.trim()) p.set('father_name', fatherName.trim())
+    if (fatherGrandfather.trim()) p.set('father_grandfather', fatherGrandfather.trim())
+    if (fatherNationalId.trim()) p.set('father_national_id', fatherNationalId.trim())
+    if (fatherPassport.trim()) p.set('father_passport', fatherPassport.trim())
+    if (fatherPhone.trim()) p.set('father_phone', fatherPhone.trim())
+    if (motherName.trim()) p.set('mother_name', motherName.trim())
+    if (motherGrandfather.trim()) p.set('mother_grandfather', motherGrandfather.trim())
+    if (motherNationalId.trim()) p.set('mother_national_id', motherNationalId.trim())
+    if (motherPassport.trim()) p.set('mother_passport', motherPassport.trim())
+    if (motherPhone.trim()) p.set('mother_phone', motherPhone.trim())
+    if (batchNumber.trim()) p.set('batch_number', batchNumber.trim())
+    p.set('status', overrides.status ?? statusFilter)
+    p.set('sort_by', overrides.sortBy ?? sortBy)
+    p.set('sort_dir', overrides.sortDir ?? sortDir)
+    const ps = overrides.pageSize ?? pageSize
+    if (overrides.full || ps === 'all') {
+      p.set('full', '1')
+    } else {
+      p.set('page', String(overrides.page ?? page))
+      p.set('page_size', String(ps))
+    }
+    return p
+  }
+
+  // تنفيذ الطلب وإعادة تعيين حالة الطباعة عند بحث جديد
+  async function runFetch(overrides: Parameters<typeof buildParams>[0]) {
+    setLoading(true)
+    setError("")
+    setPrintRows(null)
+    try {
+      const res = await fetch(`/api/reports?${buildParams(overrides)}`)
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || 'فشل في تحميل التقرير')
+      }
+      const data = await res.json()
+      setRecords(data.records ?? [])
+      setStats(data.statistics ?? null)
+      setTotal(data.total ?? 0)
+      setPage(data.page ?? 1)
+      setTotalPages(data.total_pages ?? 1)
+      if (overrides.full) {
+        setPageSize((overrides.pageSize as number | 'all') ?? pageSize)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'حدث خطأ')
+    }
+    setLoading(false)
+  }
+
+  function handleSearch(e: React.FormEvent) {
     e.preventDefault()
     setError("")
 
     // إلزام نطاق تاريخ (بداية ونهاية) لكل بحث (القسم 9): يمنع جلب كميات ضخمة
-    // دون تحديد زمني. باقي الحقول فلاتر اختيارية إضافية.
     if (!dateFrom || !dateTo) {
       setError("يجب تحديد تاريخ البداية والنهاية للبحث")
       return
@@ -102,43 +220,37 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
       return
     }
 
-    setLoading(true)
-
-    const params = new URLSearchParams()
-    if (dateFrom) params.set('date_from', dateFrom)
-    if (dateTo) params.set('date_to', dateTo)
-    if (hospitalId) params.set('hospital_id', hospitalId)
-    if (dateType) params.set('date_type', dateType)
-    if (childName.trim()) params.set('child_name', childName.trim())
-    if (fatherName.trim()) params.set('father_name', fatherName.trim())
-    if (fatherGrandfather.trim()) params.set('father_grandfather', fatherGrandfather.trim())
-    if (fatherNationalId.trim()) params.set('father_national_id', fatherNationalId.trim())
-    if (fatherPassport.trim()) params.set('father_passport', fatherPassport.trim())
-    if (fatherPhone.trim()) params.set('father_phone', fatherPhone.trim())
-    if (motherName.trim()) params.set('mother_name', motherName.trim())
-    if (motherGrandfather.trim()) params.set('mother_grandfather', motherGrandfather.trim())
-    if (motherNationalId.trim()) params.set('mother_national_id', motherNationalId.trim())
-    if (motherPassport.trim()) params.set('mother_passport', motherPassport.trim())
-    if (motherPhone.trim()) params.set('mother_phone', motherPhone.trim())
-    if (batchNumber.trim()) params.set('batch_number', batchNumber.trim())
-
-    try {
-      const res = await fetch(`/api/reports?${params}`)
-      if (!res.ok) {
-        const err = await res.json()
-        throw new Error(err.error || 'فشل في تحميل التقرير')
-      }
-      const data = await res.json()
-      setRecords(data.records ?? [])
-      setStats(data.statistics ?? null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'حدث خطأ')
-    }
-
-    setLoading(false)
+    setHasSearched(true)
+    runFetch({ page: 1 })
   }
 
-  // تفريغ كل حقول البحث للبدء ببيانات جديدة
+  function handlePageChange(nextPage: number) {
+    if (nextPage < 1 || nextPage > totalPages || nextPage === page) return
+    runFetch({ page: nextPage })
+  }
+
+  function handleSort(key: SortKey) {
+    if (sortBy === key) {
+      runFetch({ page: 1, sortBy: key, sortDir: sortDir === 'asc' ? 'desc' : 'asc' })
+      setSortDir(sortDir === 'asc' ? 'desc' : 'asc')
+    } else {
+      runFetch({ page: 1, sortBy: key, sortDir: 'asc' })
+      setSortBy(key)
+      setSortDir('asc')
+    }
+  }
+
+  function handlePageSizeChange(ps: number | 'all') {
+    setPageSize(ps)
+    runFetch({ page: 1, pageSize: ps })
+  }
+
+  function handleStatusChange(s: 'all' | 'verified' | 'unverified') {
+    setStatusFilter(s)
+    runFetch({ page: 1, status: s })
+  }
+
+  // تفريغ كل حقول البحث
   function handleReset() {
     setDateFrom("")
     setDateTo("")
@@ -155,67 +267,42 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
     setMotherPassport("")
     setMotherPhone("")
     setBatchNumber("")
+    setStatusFilter('all')
+    setPage(1)
+    setRecords([])
+    setStats(null)
+    setHasSearched(false)
+    setPrintRows(null)
   }
 
-  // إرسال طلب إعادة فتح توثيق سجل موثّق إلى الوزارة (للموثّق فقط)
-  async function handleRequestUnverify(r: ChildRecord) {
-    if (!window.confirm(`إرسال طلب إعادة فتح توثيق «${r.child_full_name}» إلى الوزارة؟`)) return
-    setRequestingId(r.id)
+  // جلب كامل النتيجة (مطابقة الفلاتر الحالية) — للطباعة والتصدير
+  async function fetchFull(): Promise<ChildRecord[]> {
+    const res = await fetch(`/api/reports?${buildParams({ full: true })}`)
+    if (!res.ok) {
+      const err = await res.json()
+      throw new Error(err.error || 'فشل في تحميل كامل البيانات')
+    }
+    const data = await res.json()
+    return (data.records ?? []) as ChildRecord[]
+  }
+
+  // الطباعة: تُحمَّل كامل النتيجة أولًا ثم تُطبع (بند 5)
+  async function handlePrint() {
+    if (records.length === 0) return
+    setFullLoading(true)
     setError("")
     try {
-      const supabase = createClient()
-      const { error } = await supabase.from('unverify_requests').insert({
-        record_id: r.id,
-        hospital_id: hospitalIds[0],
-        requested_by: userId,
-        reason: null,
-      } as never)
-      if (error) throw new Error(error.message)
-      // تحديث الحالة محليًا لتظهر "بانتظار الرد" فورًا دون إعادة بحث كامل
-      setRecords(prev => prev.map(x => x.id === r.id ? { ...x, request_status: 'pending' } : x))
+      const full = await fetchFull()
+      setPrintRows(full)
+      setTimeout(() => window.print(), 150)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل إرسال الطلب')
+      setError(err instanceof Error ? err.message : 'فشل تحميل البيانات للطباعة')
     }
-    setRequestingId(null)
+    setFullLoading(false)
   }
 
-  function handlePrint() {
-    window.print()
-  }
-
-  // حذف سجل غير موثق من نتائج البحث (للمدخل والموثق) — يمنعه RLS للسجلات الموثقة
-  async function handleDeleteRecord(r: ChildRecord) {
-    if (!window.confirm(`تحذير: سيتم حذف سجل الطفل «${r.child_full_name}» نهائيًا وستُرجَع جرعته إلى رصيد الدفعة. هل أنت متأكد؟`)) return
-    setError("")
-    try {
-      const supabase = createClient()
-      const { error } = await supabase.from('child_vaccination_records').delete().eq('id', r.id)
-      if (error) throw new Error(error.message)
-      const genderDelta = r.child_gender === 'male' ? 'male' : 'female'
-      setRecords(prev => prev.filter(x => x.id !== r.id))
-      setStats(prev => {
-        if (!prev) return prev
-        const byHospital = prev.byHospital.map(h =>
-          h.hospital_id === r.hospital_id
-            ? { ...h, total: h.total - 1, male: h.male - (genderDelta === 'male' ? 1 : 0), female: h.female - (genderDelta === 'female' ? 1 : 0) }
-            : h
-        )
-        return {
-          ...prev,
-          total: prev.total - 1,
-          male: prev.male - (genderDelta === 'male' ? 1 : 0),
-          female: prev.female - (genderDelta === 'female' ? 1 : 0),
-          byHospital,
-        }
-      })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'فشل حذف السجل')
-    }
-  }
-
-  // تحويل سجلات النتائج الحالية إلى صيغة التصدير الموحدة
-  function toExportRows(): ChildReportRow[] {
-    return records.map(r => ({
+  function toExportRows(source: ChildRecord[]): ChildReportRow[] {
+    return source.map(r => ({
       hospital_name: r.hospitals?.name,
       child_full_name: r.child_full_name,
       birth_date: r.birth_date,
@@ -232,7 +319,6 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
     }))
   }
 
-  // أعمدة Excel للتقرير الشامل — بنفس ترتيب الجدول المعروض
   const excelColumns = [
     ...(isMinistry ? [{ header: 'المستشفى', key: 'hospital_name', width: 20 }] : []),
     { header: 'اسم الطفل', key: 'child_full_name', width: 20 },
@@ -250,37 +336,43 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
   async function handleExportExcel() {
     if (records.length === 0) return
     setExporting('excel')
+    setError("")
     try {
+      const full = printRows ?? (await fetchFull())
       downloadExcel(
         `تقرير-الأطفال-${cairoToday()}.xlsx`,
         'تقرير الأطفال',
         excelColumns,
-        toExportRows()
+        toExportRows(full)
       )
-    } finally {
-      setExporting('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'فشل تحميل البيانات للتصدير')
     }
+    setExporting('')
   }
 
   async function handleExportPdf() {
     if (records.length === 0) return
     setExporting('pdf')
+    setError("")
     try {
+      const full = printRows ?? (await fetchFull())
       await downloadPdf(
         <ChildrenReportPdf
-          rows={toExportRows()}
+          rows={toExportRows(full)}
           isMinistry={isMinistry}
           dateRange={reportDateRange}
           hospitalName={reportHospitalName}
-          total={stats?.total ?? records.length}
+          total={stats?.total ?? full.length}
           male={stats?.male ?? 0}
           female={stats?.female ?? 0}
         />,
         `تقرير-الأطفال-${cairoToday()}.pdf`
       )
-    } finally {
-      setExporting('')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'فشل تحميل البيانات للتصدير')
     }
+    setExporting('')
   }
 
   function formatFullName(firstName: string, grandfatherName: string): string {
@@ -295,31 +387,42 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
     ? `${dateType === 'birth_date' ? 'حسب تاريخ الميلاد' : 'حسب تاريخ الإدخال'} — من ${dateFrom || '...'} إلى ${dateTo || '...'}`
     : ''
 
-  const textInput = "mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+  // حساب أرقام الصفحات الظاهرة حول الصفحة الحالية
+  function getPageNumbers(): number[] {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const set = new Set<number>([1, 2, totalPages - 1, totalPages, page - 1, page, page + 1])
+    return [...set].filter(p => p >= 1 && p <= totalPages).sort((a, b) => a - b)
+  }
+
+  const shownTotal = printRows ? printRows.length : total
+  const start = printRows ? 1 : total === 0 ? 0 : (page - 1) * (pageSize === 'all' ? total : pageSize) + 1
+  const end = printRows ? shownTotal : Math.min(page * (pageSize === 'all' ? total : pageSize), total)
 
   return (
     <div className="space-y-6">
-      {/* Search form */}
+      {/* نموذج البحث */}
       <form onSubmit={handleSearch} className="card p-4">
+        <SectionHeader icon={Search} title="البحث في السجلات" subtitle="حدد نطاق التاريخ إلزاميًا للبحث، ثم أضف أي فلترة اختيارية" />
+
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">
               {dateType === 'birth_date' ? 'من تاريخ الميلاد' : 'من تاريخ الإدخال'} *
             </label>
             <input type="date" required value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className={textInput} />
+              className="input-field" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">
               {dateType === 'birth_date' ? 'إلى تاريخ الميلاد' : 'إلى تاريخ الإدخال'} *
             </label>
             <input type="date" required value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className={textInput} />
+              className="input-field" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">الفلترة حسب</label>
             <select value={dateType} onChange={e => setDateType(e.target.value as 'birth_date' | 'created_at')}
-              className={textInput}>
+              className="input-field">
               <option value="birth_date">تاريخ ميلاد الطفل (الأساسي)</option>
               <option value="created_at">تاريخ الإدخال الفعلي</option>
             </select>
@@ -328,7 +431,7 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
               <select value={hospitalId} onChange={e => setHospitalId(e.target.value)}
-                className={textInput}>
+                className="input-field">
                 <option value="">كل المستشفيات</option>
                 {hospitals.map(h => (
                   <option key={h.id} value={h.id}>{h.name}</option>
@@ -338,103 +441,126 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
           )}
         </div>
 
-        <p className="text-xs text-gray-500 mt-3">
-          * حقلا التاريخ إلزاميان لكل بحث، والحد الأقصى لمدة البحث شهر واحد (بحد أقصى {MAX_REPORT_RANGE_DAYS} يومًا). باقي الحقول اختيارية.
-        </p>
+        {/* مفتاح تبديل iOS-style لإظهار/إخفاء البحث المتقدم (بند 6) */}
+        <div className="flex flex-wrap items-center gap-4 mt-2">
+          <label className="flex items-center gap-3 text-sm font-medium text-gray-700 cursor-pointer select-none">
+            <span className="toggle">
+              <input type="checkbox" checked={advancedOpen} onChange={e => setAdvancedOpen(e.target.checked)} />
+              <span className="slider" />
+            </span>
+            <span className="inline-flex items-center gap-1"><Filter size={15} /> بحث متقدم</span>
+          </label>
 
-        {/* بيانات الطفل */}
-        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الطفل</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الطفل</label>
-            <input type="text" value={childName} onChange={e => setChildName(e.target.value)}
-              className={textInput} />
+          {/* فلترة حالة السجل بأزرار Pills (بند 6) */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">حالة السجل:</span>
+            <div className="pill-group">
+              <button type="button" className={`pill ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => handleStatusChange('all')}>الكل</button>
+              <button type="button" className={`pill ${statusFilter === 'verified' ? 'active' : ''}`} onClick={() => handleStatusChange('verified')}>موثّق</button>
+              <button type="button" className={`pill ${statusFilter === 'unverified' ? 'active' : ''}`} onClick={() => handleStatusChange('unverified')}>معلّق</button>
+            </div>
           </div>
+
+          <span className="text-xs text-gray-500 mr-auto">
+            * حقلا التاريخ إلزاميان، والحد الأقصى شهر واحد (بحد أقصى {MAX_REPORT_RANGE_DAYS} يومًا)
+          </span>
         </div>
 
-        {/* بيانات الأب */}
-        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الأب</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الأب</label>
-            <input type="text" value={fatherName} onChange={e => setFatherName(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
-            <input type="text" value={fatherGrandfather} onChange={e => setFatherGrandfather(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
-            <input type="text" value={fatherNationalId} onChange={e => setFatherNationalId(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">جواز السفر</label>
-            <input type="text" value={fatherPassport} onChange={e => setFatherPassport(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">تليفون الأب</label>
-            <input type="text" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)}
-              className={textInput} />
-          </div>
-        </div>
+        {advancedOpen && (
+          <>
+            {/* بيانات الطفل */}
+            <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الطفل</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">اسم الطفل</label>
+                <input type="text" value={childName} onChange={e => setChildName(e.target.value)}
+                  className="input-field" />
+              </div>
+            </div>
 
-        {/* بيانات الأم */}
-        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الأم</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الأم</label>
-            <input type="text" value={motherName} onChange={e => setMotherName(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
-            <input type="text" value={motherGrandfather} onChange={e => setMotherGrandfather(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
-            <input type="text" value={motherNationalId} onChange={e => setMotherNationalId(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">جواز السفر</label>
-            <input type="text" value={motherPassport} onChange={e => setMotherPassport(e.target.value)}
-              className={textInput} />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">تليفون الأم</label>
-            <input type="text" value={motherPhone} onChange={e => setMotherPhone(e.target.value)}
-              className={textInput} />
-          </div>
-        </div>
+            {/* بيانات الأب */}
+            <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الأب</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">اسم الأب</label>
+                <input type="text" value={fatherName} onChange={e => setFatherName(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
+                <input type="text" value={fatherGrandfather} onChange={e => setFatherGrandfather(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+                <input type="text" value={fatherNationalId} onChange={e => setFatherNationalId(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">جواز السفر</label>
+                <input type="text" value={fatherPassport} onChange={e => setFatherPassport(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">تليفون الأب</label>
+                <input type="text" value={fatherPhone} onChange={e => setFatherPhone(e.target.value)}
+                  className="input-field" />
+              </div>
+            </div>
 
-        {/* التطعيم */}
-        <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">التطعيم</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
-            <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
-              className={textInput} />
-          </div>
-        </div>
+            {/* بيانات الأم */}
+            <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">بيانات الأم</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">اسم الأم</label>
+                <input type="text" value={motherName} onChange={e => setMotherName(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
+                <input type="text" value={motherGrandfather} onChange={e => setMotherGrandfather(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+                <input type="text" value={motherNationalId} onChange={e => setMotherNationalId(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">جواز السفر</label>
+                <input type="text" value={motherPassport} onChange={e => setMotherPassport(e.target.value)}
+                  className="input-field" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">تليفون الأم</label>
+                <input type="text" value={motherPhone} onChange={e => setMotherPhone(e.target.value)}
+                  className="input-field" />
+              </div>
+            </div>
 
-        <div className="flex gap-3 mt-4">
-          <button type="submit" disabled={loading}
-            className="btn btn-primary">
+            {/* التطعيم */}
+            <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">التطعيم</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
+                <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
+                  className="input-field" />
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="flex flex-wrap gap-3 mt-4">
+          <button type="submit" disabled={loading} className="btn btn-primary">
             {loading ? "جاري البحث..." : "بحث"}
           </button>
-          <button type="button" onClick={handleReset}
-            className="btn btn-secondary">
-            تفريغ الحقول
+          <button type="button" onClick={handleReset} className="btn btn-secondary">
+            <RotateCcw size={16} /> تفريغ الحقول
           </button>
           {records.length > 0 && (
-            <button type="button" onClick={handlePrint}
+            <button type="button" onClick={handlePrint} disabled={fullLoading}
               className="btn btn-secondary">
-              طباعة
+              <Printer size={16} /> {fullLoading ? 'جاري تحميل كامل البيانات...' : 'طباعة الكل'}
             </button>
           )}
         </div>
@@ -444,9 +570,10 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded-lg">{error}</div>
       )}
 
-      {/* Statistics */}
+      {/* الإحصائيات */}
       {stats && (
         <div className="space-y-4">
+          <SectionHeader icon={Baby} title="إحصائيات النتائج" subtitle="ذكور / إناث / إجمالي ضمن النطاق المحدد" />
           <div className="grid grid-cols-3 gap-4">
             <div className="card p-4 text-center">
               <div className="text-2xl font-bold text-primary">{stats.total}</div>
@@ -462,33 +589,35 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
             </div>
           </div>
 
-          <div className="card p-4">
-            <h4 className="font-semibold mb-3">التوزيع حسب المستشفى</h4>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b text-right text-gray-600">
-                  <th className="py-2 px-3">المستشفى</th>
-                  <th className="py-2 px-3">ذكور</th>
-                  <th className="py-2 px-3">إناث</th>
-                  <th className="py-2 px-3">الإجمالي</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.byHospital.map(h => (
-                  <tr key={h.hospital_id} className="border-b">
-                    <td className="py-2 px-3">{h.hospital_name}</td>
-                    <td className="py-2 px-3">{h.male}</td>
-                    <td className="py-2 px-3">{h.female}</td>
-                    <td className="py-2 px-3 font-bold">{h.total}</td>
+          {isMinistry && (
+            <div className="card p-4">
+              <h4 className="font-semibold mb-3">التوزيع حسب المستشفى</h4>
+              <table>
+                <thead>
+                  <tr className="text-right">
+                    <th>المستشفى</th>
+                    <th>ذكور</th>
+                    <th>إناث</th>
+                    <th>الإجمالي</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {stats.byHospital.map(h => (
+                    <tr key={h.hospital_id}>
+                      <td>{h.hospital_name}</td>
+                      <td>{h.male}</td>
+                      <td>{h.female}</td>
+                      <td className="font-bold">{h.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Results */}
+      {/* النتائج */}
       {records.length > 0 && (
         <div ref={printRef} className="card overflow-hidden">
           {/* ترويسة الطباعة فقط */}
@@ -497,8 +626,12 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
             {reportDateRange && <p className="mt-1 text-sm">{reportDateRange}</p>}
             <p className="mt-1 text-sm">المستشفى: {reportHospitalName}</p>
           </div>
+
           <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2 print:hidden">
-            <h3 className="font-semibold">نتائج البحث ({records.length})</h3>
+            <div>
+              <h3 className="font-semibold">نتائج البحث ({total} سجل)</h3>
+              <p className="text-xs text-gray-500 mt-1">اضغط على أي صف لفتح سجل الطفل كاملًا — كل الإجراءات داخله</p>
+            </div>
             <div className="flex gap-2">
               <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
                 className="btn btn-success">
@@ -510,114 +643,147 @@ export default function ReportsContent({ hospitals, userRole, hospitalIds, userI
               </button>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+
+          {/* جدول الشاشة (الصفحة الحالية فقط) */}
+          <div className="overflow-x-auto print:hidden">
+            <table>
               <thead>
-                <tr className="bg-gray-50 border-b text-right">
-                  {isMinistry && <th className="py-3 px-3">المستشفى</th>}
-                  <th className="py-3 px-3">اسم الطفل</th>
-                  <th className="py-3 px-3">تاريخ الميلاد</th>
-                  <th className="py-3 px-3">اسم الأب</th>
-                  <th className="py-3 px-3">رقم الأب القومي</th>
-                  <th className="py-3 px-3">اسم الأم</th>
-                  <th className="py-3 px-3">رقم الأم القومي</th>
-                  <th className="py-3 px-3">تاريخ التطعيم</th>
-                  <th className="py-3 px-3">القائم بالتطعيم</th>
-                  <th className="py-3 px-3">رقم التشغيلة</th>
-                  <th className="py-3 px-3">تاريخ دخول الطلبية</th>
-                  {(isMinistry || canManageChild) && <th className="py-3 px-3 print:hidden">الحالة</th>}
-                  <th className="py-3 px-3 print:hidden">سجل فردي</th>
-                  {isVerifier && <th className="py-3 px-3 print:hidden">إعادة فتح التوثيق</th>}
+                <tr className="text-right">
+                  {isMinistry && <SortableTh label="المستشفى" sortKey="hospital" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />}
+                  <SortableTh label="اسم الطفل" sortKey="child_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="تاريخ الميلاد" sortKey="birth_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="اسم الأب" sortKey="father_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                  <th>رقم الأب القومي</th>
+                  <SortableTh label="اسم الأم" sortKey="mother_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                  <th>رقم الأم القومي</th>
+                  <SortableTh label="تاريخ التطعيم" sortKey="vaccination_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                  <th>القائم بالتطعيم</th>
+                  <th>رقم التشغيلة</th>
+                  <th>تاريخ دخول الطلبية</th>
+                  <th>الحالة</th>
                 </tr>
               </thead>
               <tbody>
                 {records.map(r => (
-                  <tr key={r.id} className="border-b hover:bg-gray-50">
-                    {isMinistry && <td className="py-2 px-3">{r.hospitals?.name ?? '-'}</td>}
-                    <td className="py-2 px-3">{r.child_full_name}</td>
-                    <td className="py-2 px-3">{r.birth_date}</td>
-                    <td className="py-2 px-3">{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
-                    <td className="py-2 px-3">{r.father_national_id}</td>
-                    <td className="py-2 px-3">{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>
-                    <td className="py-2 px-3">{r.mother_national_id ?? '-'}</td>
-                    <td className="py-2 px-3">{r.vaccination_date}</td>
-                    <td className="py-2 px-3">{r.vaccinators?.full_name ?? '-'}</td>
-                    <td className="py-2 px-3">{r.vaccine_batches?.batch_number ?? '-'}</td>
-                    <td className="py-2 px-3">{r.vaccine_batches?.delivery_date ?? '-'}</td>
-                    {(isMinistry || canManageChild) && (
-                      <td className="py-2 px-3 print:hidden">
-                        {r.is_verified
-                          ? <span className="badge badge-success">موثق</span>
-                          : <span className="badge badge-warning">غير موثق</span>
-                        }
-                      </td>
-                    )}
-                    <td className="py-2 px-3 print:hidden">
-                      <div className="flex flex-col gap-2 items-start">
-                        <Link href={`/reports/child/${r.id}`} target="_blank"
-                          className="text-primary hover:text-primary-dark text-sm px-1 py-0.5">
-                          سجل فردي
-                        </Link>
-                        {canManageChild && !r.is_verified && (
-                          <>
-                            <Link
-                              href={`${userRole === 'hospital_verifier' ? '/hospital-verifier' : '/hospital-entry'}/${r.id}/edit`}
-                              className="btn-soft px-3 py-1 text-xs"
-                            >
-                              تعديل
-                            </Link>
-                            <button type="button" onClick={() => handleDeleteRecord(r)}
-                              className="px-3 py-1 text-xs rounded border border-red-200 text-red-600 hover:bg-red-50">
-                              حذف
-                            </button>
-                          </>
-                        )}
-                      </div>
+                  <tr key={r.id} className="row-clickable" onClick={() => router.push(`/reports/child/${r.id}`)}>
+                    {isMinistry && <td>{r.hospitals?.name ?? '-'}</td>}
+                    <td className="font-medium">{r.child_full_name}</td>
+                    <td>{r.birth_date}</td>
+                    <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
+                    <td>{r.father_national_id}</td>
+                    <td>{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>
+                    <td>{r.mother_national_id ?? '-'}</td>
+                    <td>{r.vaccination_date}</td>
+                    <td>{r.vaccinators?.full_name ?? '-'}</td>
+                    <td>{r.vaccine_batches?.batch_number ?? '-'}</td>
+                    <td>{r.vaccine_batches?.delivery_date ?? '-'}</td>
+                    <td>
+                      {/* نص حالة ملوّن مباشر (بند 1) — وليس شارة — في جداول القوائم */}
+                      <span className={r.is_verified ? 'status-verified' : 'status-unverified'}>
+                        {r.is_verified ? 'موثّق' : 'غير موثّق'}
+                      </span>
                     </td>
-                    {isVerifier && (
-                      <td className="py-2 px-3 print:hidden">
-                        {!r.is_verified ? (
-                          <span className="text-xs text-gray-400">غير موثق</span>
-                        ) : r.request_status === 'pending' ? (
-                          <span className="badge badge-warning">بانتظار الرد</span>
-                        ) : (
-                          <div className="flex flex-col items-start gap-1">
-                            {r.request_status === 'rejected' && (
-                              <span className="text-xs text-red-600">سبق رفض الطلب</span>
-                            )}
-                            <button
-                              type="button"
-                              disabled={requestingId === r.id}
-                              onClick={() => handleRequestUnverify(r)}
-                              className="text-primary hover:text-primary-dark text-sm disabled:opacity-50">
-                              {requestingId === r.id ? 'جاري الإرسال...' : 'طلب إعادة فتح'}
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+
+          {/* جدول الطباعة (كامل النتيجة) */}
+          {printRows && (
+            <div className="hidden print:block overflow-x-auto">
+              <table>
+                <thead>
+                  <tr className="text-right">
+                    {isMinistry && <th>المستشفى</th>}
+                    <th>اسم الطفل</th>
+                    <th>تاريخ الميلاد</th>
+                    <th>اسم الأب</th>
+                    <th>رقم الأب القومي</th>
+                    <th>اسم الأم</th>
+                    <th>رقم الأم القومي</th>
+                    <th>تاريخ التطعيم</th>
+                    <th>القائم بالتطعيم</th>
+                    <th>رقم التشغيلة</th>
+                    <th>تاريخ دخول الطلبية</th>
+                    <th>الحالة</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {printRows.map(r => (
+                    <tr key={r.id}>
+                      {isMinistry && <td>{r.hospitals?.name ?? '-'}</td>}
+                      <td>{r.child_full_name}</td>
+                      <td>{r.birth_date}</td>
+                      <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
+                      <td>{r.father_national_id}</td>
+                      <td>{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>
+                      <td>{r.mother_national_id ?? '-'}</td>
+                      <td>{r.vaccination_date}</td>
+                      <td>{r.vaccinators?.full_name ?? '-'}</td>
+                      <td>{r.vaccine_batches?.batch_number ?? '-'}</td>
+                      <td>{r.vaccine_batches?.delivery_date ?? '-'}</td>
+                      <td>{r.is_verified ? 'موثّق' : 'غير موثّق'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* الترحيل (Pagination) — بند 5 */}
+          <div className="p-4 border-t flex flex-wrap items-center justify-between gap-3 print:hidden">
+            <div className="flex items-center gap-3">
+              <select
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm w-auto"
+                value={pageSize === 'all' ? 'all' : String(pageSize)}
+                onChange={e => handlePageSizeChange(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+              >
+                {PAGE_SIZES.map(s => <option key={s} value={s}>{s} / صفحة</option>)}
+                <option value="all">الكل</option>
+              </select>
+              <span className="text-sm text-gray-600">
+                عرض {start} - {end} من إجمالي {shownTotal} سجل
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 flex-wrap">
+              <button className="page-btn" disabled={page <= 1} onClick={() => handlePageChange(1)} title="الأولى">
+                <ChevronsRight size={16} />
+              </button>
+              <button className="page-btn" disabled={page <= 1} onClick={() => handlePageChange(page - 1)} title="السابقة">
+                <ChevronRight size={16} />
+              </button>
+              {getPageNumbers().map(n => (
+                <button key={n} className={`page-btn ${n === page ? 'active' : ''}`} onClick={() => handlePageChange(n)}>
+                  {n}
+                </button>
+              ))}
+              <button className="page-btn" disabled={page >= totalPages} onClick={() => handlePageChange(page + 1)} title="التالية">
+                <ChevronLeft size={16} />
+              </button>
+              <button className="page-btn" disabled={page >= totalPages} onClick={() => handlePageChange(totalPages)} title="الأخيرة">
+                <ChevronsLeft size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
-      {!loading && records.length === 0 && !error && (
+      {!loading && !hasSearched && !error && (
         <p className="text-center text-gray-500 py-8">استخدم نموذج البحث أعلاه لعرض التقارير</p>
       )}
 
       {/* Print styles */}
       <style jsx global>{`
         @media print {
-          nav, form, button, .no-print { display: none !important; }
+          .no-print { display: none !important; }
+          form, button { display: none !important; }
           body { background: white; }
           table { font-size: 10pt; width: 100%; border-collapse: collapse; }
           th, td { border: 1px solid #000; padding: 4px 6px; text-align: right; }
           .print\\:block { display: block !important; }
           .print\\:hidden { display: none !important; }
-          .print\\:grid-cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
         }
       `}</style>
     </div>

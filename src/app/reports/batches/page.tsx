@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getHospitalById } from '@/lib/db/hospitals'
-import DashboardNav from '@/components/DashboardNav'
+import AppShell from '@/components/AppShell'
 import BatchMovementReport from './BatchMovementReport'
 
 export default async function BatchesReportPage() {
@@ -21,18 +21,15 @@ export default async function BatchesReportPage() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background">
-      <DashboardNav user={user} />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold">تقرير حركة الطعوم</h2>
-          <p className="text-gray-600">الوارد والمستخدم والمتبقي لكل تشغيلة خلال فترة زمنية محددة</p>
-        </div>
-        <BatchMovementReport
-          hospitals={hospitals}
-          userRole={user.role}
-        />
-      </main>
-    </div>
+    <AppShell user={user} maxWidth="max-w-7xl">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">تقرير حركة الطعوم</h2>
+        <p className="text-gray-600">الوارد والمستخدم والمتبقي لكل تشغيلة خلال فترة زمنية محددة</p>
+      </div>
+      <BatchMovementReport
+        hospitals={hospitals}
+        userRole={user.role}
+      />
+    </AppShell>
   )
 }

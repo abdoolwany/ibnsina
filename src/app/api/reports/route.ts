@@ -127,14 +127,43 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
+  // ترحيل وفرز من جهة الخادم (بند 5): الواجهة تطلب صفحة محددة فقط (20 سجلًا افتراضيًا)،
+  // بينما تُحسب الإحصائيات دائمًا على كامل النتيجة. عند التصدير/الطباعة (full=1) تُرجَع كل الصفوف.
   const allRecords = rows ?? []
-  const total = allRecords.length
-  const males = allRecords.filter(r => r.child_gender === 'male').length
-  const females = allRecords.filter(r => r.child_gender === 'female').length
 
-  // إحصائيات لكل مستشفى على حدة
+  const statusFilter = searchParams.get('status')
+  const filtered = statusFilter === 'verified' || statusFilter === 'unverified'
+    ? allRecords.filter(r => statusFilter === 'verified' ? r.is_verified : !r.is_verified)
+    : allRecords
+
+  // الفرز: مفتاح + اتجاه، مع قيمة افتراضية بالاسم تصاعديًا
+  const sortBy = searchParams.get('sort_by') ?? 'child_name'
+  const sortDir = searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc'
+  const dirMul = sortDir === 'desc' ? -1 : 1
+  const sorted = [...filtered].sort((a, b) => {
+    let av: string | number, bv: string | number
+    switch (sortBy) {
+      case 'birth_date': av = a.birth_date; bv = b.birth_date; break
+      case 'vaccination_date': av = a.vaccination_date; bv = b.vaccination_date; break
+      case 'created_at': av = a.created_at; bv = b.created_at; break
+      case 'hospital': av = a.hospital_name ?? ''; bv = b.hospital_name ?? ''; break
+      case 'father_name': av = `${a.father_first_name} ${a.father_grandfather_name}`; bv = `${b.father_first_name} ${b.father_grandfather_name}`; break
+      case 'mother_name': av = `${a.mother_first_name} ${a.mother_grandfather_name}`; bv = `${b.mother_first_name} ${b.mother_grandfather_name}`; break
+      default: av = a.child_full_name; bv = b.child_full_name
+    }
+    av = av ?? ''; bv = bv ?? ''
+    if (av < bv) return -1 * dirMul
+    if (av > bv) return 1 * dirMul
+    return 0
+  })
+
+  const total = sorted.length
+  const males = sorted.filter(r => r.child_gender === 'male').length
+  const females = sorted.filter(r => r.child_gender === 'female').length
+
+  // إحصائيات لكل مستشفى على حدة (على كامل النتيجة)
   const byHospital = new Map<string, HospitalStat>()
-  for (const r of allRecords) {
+  for (const r of sorted) {
     const existing = byHospital.get(r.hospital_id) ?? {
       hospital_id: r.hospital_id,
       hospital_name: r.hospital_name ?? 'غير معروف',
@@ -148,8 +177,28 @@ export async function GET(request: Request) {
     byHospital.set(r.hospital_id, existing)
   }
 
+  // تحديد الصفحة المطلوبة: full=1 للتصدير/الطباعة (كل الصفوف)، وإلا صفحة 20 افتراضيًا
+  const isFull = searchParams.get('full') === '1'
+  let pageRows: ReportRow[]
+  let page = 1
+  let pageSize = 20
+  let totalPages = 1
+  if (isFull) {
+    pageRows = sorted
+    pageSize = Math.max(total, 1)
+  } else {
+    const parsedPage = Number.parseInt(searchParams.get('page') ?? '1', 10)
+    const parsedSize = Number.parseInt(searchParams.get('page_size') ?? '20', 10)
+    page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1
+    pageSize = [10, 20, 50].includes(parsedSize) ? parsedSize : 20
+    totalPages = Math.max(1, Math.ceil(total / pageSize))
+    if (page > totalPages) page = totalPages
+    const start = (page - 1) * pageSize
+    pageRows = sorted.slice(start, start + pageSize)
+  }
+
   // إعادة تشكيل الصفوف المُسطّحة إلى البنية المتداخلة التي تتوقعها الواجهة
-  const shaped = allRecords.map(r => ({
+  const shaped = pageRows.map(r => ({
     id: r.id,
     hospital_id: r.hospital_id,
     child_full_name: r.child_full_name,
@@ -213,5 +262,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     records: shaped,
     statistics: { total, male: males, female: females, byHospital: [...byHospital.values()] },
+    total,
+    page,
+    page_size: pageSize,
+    total_pages: totalPages,
   })
 }

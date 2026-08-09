@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getHospitalById } from '@/lib/db/hospitals'
-import DashboardNav from '@/components/DashboardNav'
+import AppShell from '@/components/AppShell'
 import ReportsContent from './ReportsContent'
 
 export default async function ReportsPage() {
@@ -21,20 +21,15 @@ export default async function ReportsPage() {
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background">
-      <DashboardNav user={user} />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold">التقارير والبحث</h2>
-          <p className="text-gray-600">البحث في سجلات الأطفال والتطعيمات</p>
-        </div>
-        <ReportsContent
-          hospitals={hospitals}
-          userRole={user.role}
-          hospitalIds={user.hospitalIds}
-          userId={user.id}
-        />
-      </main>
-    </div>
+    <AppShell user={user} maxWidth="max-w-7xl">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold">التقارير والبحث</h2>
+        <p className="text-gray-600">البحث في سجلات الأطفال والتطعيمات</p>
+      </div>
+      <ReportsContent
+        hospitals={hospitals}
+        userRole={user.role}
+      />
+    </AppShell>
   )
 }

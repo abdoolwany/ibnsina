@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import DashboardNav from './DashboardNav'
+import AppShell from './AppShell'
 
 interface Props {
   children: React.ReactNode
@@ -15,11 +15,8 @@ export default async function DashboardShell({ children, allowedRoles }: Props) 
   }
 
   return (
-    <div dir="rtl" className="min-h-screen bg-background">
-      <DashboardNav user={user} />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        {children}
-      </main>
-    </div>
+    <AppShell user={user}>
+      {children}
+    </AppShell>
   )
 }

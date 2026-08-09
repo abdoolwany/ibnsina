@@ -63,7 +63,7 @@ export default async function HospitalVerifierPage() {
           {pendingVerification.length === 0 ? (
             <p className="text-gray-500 text-center py-8">جميع السجلات موثقة</p>
           ) : (
-            <VerifyList records={pendingVerification} userId={user!.id} />
+            <VerifyList records={pendingVerification} />
           )}
         </div>
       </div>

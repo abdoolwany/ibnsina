@@ -1,0 +1,67 @@
+"use client"
+
+import { useEffect, useState } from "react"
+import { Syringe, Clock } from "lucide-react"
+import type { AuthUser } from "@/lib/auth"
+
+const roleLabels: Record<string, string> = {
+  hospital_entry: 'مدخل بيانات',
+  hospital_verifier: 'موثق',
+  moh_level1: 'وزارة - مستوى أول',
+  moh_admin: 'الإدارة العليا',
+  system_operator: 'مشغل النظام',
+}
+
+// ساعة رقمية حية بلون #17D4FE (بند 1/2) — تُحدَّث كل ثانية بتوقيت القاهرة
+const clockFormatter = new Intl.DateTimeFormat('ar-EG', {
+  timeZone: 'Africa/Cairo',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true,
+})
+
+function useLiveClock() {
+  const [now, setNow] = useState("")
+  useEffect(() => {
+    const update = () => setNow(clockFormatter.format(new Date()))
+    const t = setInterval(update, 1000)
+    // تحديث فوري بعد أول تيك لتجنب ظهور الساعة فارغة عند التحميل
+    const id = setTimeout(update, 0)
+    return () => { clearInterval(t); clearTimeout(id) }
+  }, [])
+  return now
+}
+
+export default function TopBar({ user }: { user: AuthUser }) {
+  const clock = useLiveClock()
+
+  return (
+    <header className="topbar topbar-gradient no-print" dir="rtl">
+      <div className="flex items-center justify-between gap-4 px-5 py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="grid place-items-center w-9 h-9 rounded-lg bg-white/15 text-white">
+            <Syringe size={20} />
+          </span>
+          <span className="font-bold text-white hidden sm:inline">منظومة تطعيم الكبدي B</span>
+        </div>
+
+        {/* اسم النظام الكامل في المنتصف */}
+        <h1 className="font-bold text-white text-base sm:text-lg text-center leading-snug">
+          منظومة تتبع توزيع لقاحات الالتهاب الكبدي B
+        </h1>
+
+        <div className="flex items-center gap-4 min-w-0">
+          <span className="flex items-center gap-2 text-[#17D4FE] font-semibold text-sm" dir="ltr">
+            <Clock size={16} />
+            {clock}
+          </span>
+          <div className="hidden md:block text-left">
+            <p className="text-sm font-semibold text-white truncate max-w-[160px]">{user.fullName ?? user.email}</p>
+            <p className="text-[11px] text-white/75">{roleLabels[user.role ?? ''] ?? user.role}</p>
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}

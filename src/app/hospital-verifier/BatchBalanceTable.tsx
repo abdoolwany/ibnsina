@@ -12,32 +12,34 @@ export default function BatchBalanceTable({ balances }: { balances: BatchBalance
 
   return (
     <div>
-      <label className="flex items-center gap-2 text-sm text-gray-700 mb-3">
-        <input type="checkbox" checked={showEmptied} onChange={e => setShowEmptied(e.target.checked)}
-          className="rounded border-gray-300" />
+      <label className="flex items-center gap-3 text-sm text-gray-700 mb-3 cursor-pointer select-none">
+        <span className="toggle">
+          <input type="checkbox" checked={showEmptied} onChange={e => setShowEmptied(e.target.checked)} />
+          <span className="slider" />
+        </span>
         إظهار التشغيلات التي فرغت منها الطعوم
       </label>
       {visible.length === 0 ? (
         <p className="text-gray-500 text-center py-8">لا توجد دفعات مستلمة بعد</p>
       ) : (
-        <table className="w-full text-sm">
+        <table>
           <thead>
-            <tr className="text-right border-b text-gray-600">
-              <th className="py-2">رقم التشغيلة</th>
-              <th className="py-2">تاريخ الصلاحية</th>
-              <th className="py-2">المُسلَّم</th>
-              <th className="py-2">المستخدم</th>
-              <th className="py-2">المتبقي</th>
+            <tr className="text-right">
+              <th>رقم التشغيلة</th>
+              <th>تاريخ الصلاحية</th>
+              <th>المُسلَّم</th>
+              <th>المستخدم</th>
+              <th>المتبقي</th>
             </tr>
           </thead>
           <tbody>
             {visible.map(b => (
-              <tr key={b.batch_id} className="border-b hover:bg-gray-50">
-                <td className="py-2 font-medium">{b.batch_number}</td>
-                <td className={`py-2 ${b.expiry_date < today ? 'text-red-600' : ''}`}>{b.expiry_date}</td>
-                <td className="py-2">{b.total_quantity}</td>
-                <td className="py-2">{b.used_quantity}</td>
-                <td className={`py-2 font-bold ${b.remaining_balance <= 0 ? 'text-red-600' : 'text-green-600'}`}>{b.remaining_balance}</td>
+              <tr key={b.batch_id}>
+                <td className="font-medium">{b.batch_number}</td>
+                <td className={b.expiry_date < today ? 'cell-critical' : ''}>{b.expiry_date}</td>
+                <td>{b.total_quantity}</td>
+                <td>{b.used_quantity}</td>
+                <td className={b.remaining_balance <= 0 ? 'cell-critical' : 'cell-normal'}>{b.remaining_balance}</td>
               </tr>
             ))}
           </tbody>

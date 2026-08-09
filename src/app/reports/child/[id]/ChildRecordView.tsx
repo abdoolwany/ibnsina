@@ -1,8 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { Pencil, Trash2, CheckCircle2, LockOpen } from "lucide-react"
 import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { formatCairoDateTime, cairoToday } from "@/lib/time"
+import { createClient } from "@/lib/supabase/client"
 
 // بيانات السجل مع الروابط الداخلية القادمة من الخادم
 interface ChildRecordViewData {
@@ -30,6 +34,15 @@ interface ChildRecordViewData {
   hospitals: { name: string } | null
 }
 
+interface Props {
+  record: ChildRecordViewData
+  userRole: string | null
+  userId: string
+  hospitalIds: string[]
+  canManage: boolean
+  canVerify: boolean
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-wrap justify-between gap-2 py-2 border-b border-gray-100 last:border-0">
@@ -48,10 +61,34 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-export default function ChildRecordView({ record }: { record: ChildRecordViewData }) {
+export default function ChildRecordView({ record, userRole, userId, hospitalIds, canManage, canVerify }: Props) {
   const [exporting, setExporting] = useState(false)
+  const [action, setAction] = useState<'' | 'delete' | 'verify' | 'unverify'>('')
+  const [error, setError] = useState("")
+  const [requestStatus, setRequestStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
+  const router = useRouter()
+  const supabase = createClient()
+
   const fatherName = `${record.father_first_name} ${record.father_grandfather_name}`.trim()
   const motherName = `${record.mother_first_name} ${record.mother_grandfather_name}`.trim()
+
+  // حالة طلب إعادة فتح التوثيق إن وُجد (للموثّق)
+  useEffect(() => {
+    if (!canVerify || !record.is_verified) return
+    let cancelled = false
+    supabase
+      .from('unverify_requests')
+      .select('status')
+      .eq('record_id', record.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        const st = (data as { status: string } | null)?.status
+        if (!cancelled && st) setRequestStatus(st as typeof requestStatus)
+      })
+    return () => { cancelled = true }
+  }, [record.id, record.is_verified, canVerify, supabase])
 
   async function handleDownload() {
     setExporting(true)
@@ -91,16 +128,100 @@ export default function ChildRecordView({ record }: { record: ChildRecordViewDat
     }
   }
 
+  async function handleVerify() {
+    if (!window.confirm(`توثيق سجل الطفل «${record.child_full_name}»؟ بعد التوثيق يُقفل السجل نهائيًا من التعديل.`)) return
+    setAction('verify')
+    setError("")
+    const { error: verifyError } = await supabase
+      .from('child_vaccination_records')
+      .update({ is_verified: true, verified_by: userId, verified_at: new Date().toISOString() } as never)
+      .eq('id', record.id)
+    if (verifyError) {
+      setError(verifyError.message)
+    } else {
+      router.refresh()
+    }
+    setAction('')
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`تحذير: سيتم حذف سجل الطفل «${record.child_full_name}» نهائيًا وستُرجَع جرعته إلى رصيد الدفعة. هل أنت متأكد؟`)) return
+    setAction('delete')
+    setError("")
+    const { error: delError } = await supabase.from('child_vaccination_records').delete().eq('id', record.id)
+    if (delError) {
+      setError(delError.message)
+      setAction('')
+    } else {
+      router.push('/reports')
+      router.refresh()
+    }
+  }
+
+  async function handleRequestUnverify() {
+    if (!window.confirm(`إرسال طلب إعادة فتح توثيق «${record.child_full_name}» إلى الوزارة؟`)) return
+    setAction('unverify')
+    setError("")
+    const { error } = await supabase.from('unverify_requests').insert({
+      record_id: record.id,
+      hospital_id: hospitalIds[0],
+      requested_by: userId,
+      reason: null,
+    } as never)
+    if (error) {
+      setError(error.message)
+    } else {
+      setRequestStatus('pending')
+    }
+    setAction('')
+  }
+
+  const editPath = userRole === 'hospital_verifier'
+    ? `/hospital-verifier/${record.id}/edit`
+    : `/hospital-entry/${record.id}/edit`
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className={`badge ${record.is_verified ? 'badge-success' : 'badge-warning'}`}>
-          {record.is_verified ? 'موثّق' : 'غير موثّق'}
-        </span>
-        <button onClick={handleDownload} disabled={exporting} className="btn btn-danger">
-          {exporting ? 'جاري التنزيل...' : 'تنزيل PDF'}
-        </button>
-      </div>
+      {error && (
+        <div className="bg-red-50 p-3 text-sm text-red-700 rounded-lg">{error}</div>
+      )}
+
+      {/* شريط الإجراءات — تظهر الأزرار حسب صلاحية ومستوى المستخدم (بند 5) */}
+      {(canManage || canVerify || exporting) && (
+        <div className="card p-4 flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
+            {canManage && (
+              <>
+                <Link href={editPath} className="btn btn-secondary">
+                  <Pencil size={16} /> تعديل
+                </Link>
+                <button onClick={handleDelete} disabled={action === 'delete'}
+                  className="btn btn-danger">
+                  <Trash2 size={16} /> {action === 'delete' ? 'جاري الحذف...' : 'حذف'}
+                </button>
+              </>
+            )}
+            {canVerify && !record.is_verified && (
+              <button onClick={handleVerify} disabled={action === 'verify'}
+                className="btn btn-success">
+                <CheckCircle2 size={16} /> {action === 'verify' ? 'جاري التوثيق...' : 'توثيق'}
+              </button>
+            )}
+            {canVerify && record.is_verified && requestStatus === 'pending' && (
+              <span className="badge badge-warning">بانتظار رد الوزارة على إعادة الفتح</span>
+            )}
+            {canVerify && record.is_verified && requestStatus !== 'pending' && (
+              <button onClick={handleRequestUnverify} disabled={action === 'unverify'}
+                className="btn btn-warning">
+                <LockOpen size={16} /> {action === 'unverify' ? 'جاري الإرسال...' : 'طلب إعادة فتح التوثيق'}
+              </button>
+            )}
+            <button onClick={handleDownload} disabled={exporting} className="btn btn-danger">
+              {exporting ? 'جاري التنزيل...' : 'تنزيل PDF'}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">

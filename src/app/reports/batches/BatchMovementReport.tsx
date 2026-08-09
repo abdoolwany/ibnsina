@@ -1,11 +1,25 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, type ElementType } from "react"
+import { Search, RotateCcw, Activity } from "lucide-react"
 import type { UserRole, Hospital } from "@/types/database"
 import { downloadExcel } from "@/lib/reports/exportUtils"
 import { BatchesReportPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { cairoToday } from "@/lib/time"
 import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from "@/lib/time"
+
+// شريط عنوان قسم: خلفية تدرّج الأقسام ونص أبيض (بند 4)
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; title: string; subtitle?: string }) {
+  return (
+    <div className="section-header mb-4">
+      <Icon size={18} />
+      <div>
+        <h3 className="font-bold">{title}</h3>
+        {subtitle && <p className="text-xs text-white/90">{subtitle}</p>}
+      </div>
+    </div>
+  )
+}
 
 interface BatchMovementRow {
   batch_id: string
@@ -152,27 +166,28 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
   return (
     <div className="space-y-6">
       <form onSubmit={handleSearch} className="card p-4">
+        <SectionHeader icon={Search} title="تقرير حركة الطعوم" subtitle="الوارد والمستخدم والمتبقي لكل تشغيلة خلال الفترة المحددة" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">من تاريخ (دخول الطلبية) *</label>
             <input type="date" required value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              className="input-field" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">إلى تاريخ (دخول الطلبية) *</label>
             <input type="date" required value={dateTo} onChange={e => setDateTo(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              className="input-field" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
             <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
-              className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+              className="input-field" />
           </div>
           {userRole === 'moh_admin' && (
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
               <select value={hospitalId} onChange={e => setHospitalId(e.target.value)}
-                className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
+                className="input-field">
                 <option value="">كل المستشفيات</option>
                 {hospitals.map(h => (
                   <option key={h.id} value={h.id}>{h.name}</option>
@@ -182,9 +197,11 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
-            <input type="checkbox" checked={includeEmptied} onChange={e => handleToggleEmptied(e.target.checked)}
-              className="rounded border-gray-300" />
+          <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer select-none">
+            <span className="toggle">
+              <input type="checkbox" checked={includeEmptied} onChange={e => handleToggleEmptied(e.target.checked)} />
+              <span className="slider" />
+            </span>
             إظهار التشغيلات التي فرغت منها الطعوم
           </label>
           <button type="submit" disabled={loading}
@@ -193,7 +210,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
           </button>
           <button type="button" onClick={handleReset}
             className="btn btn-secondary">
-            تفريغ الحقول
+            <RotateCcw size={16} /> تفريغ الحقول
           </button>
           <span className="text-xs text-gray-500">
             * حقلا التاريخ إلزاميان للبحث، والحد الأقصى لمدة البحث شهر واحد (بحد أقصى {MAX_REPORT_RANGE_DAYS} يومًا)
@@ -213,10 +230,7 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
         <div className="card overflow-hidden">
           <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="font-semibold">نتائج التقرير ({rows.length} تشغيلة)</h3>
-              <p className="text-xs text-gray-500 mt-1">
-                المستخدم = عدد الأطفال المطعّمين من هذه التشغيلة خلال الفترة المحددة، المتبقي = الرصيد الحالي
-              </p>
+              <SectionHeader icon={Activity} title={`نتائج التقرير (${rows.length} تشغيلة)`} subtitle="المستخدم = عدد الأطفال المطعّمين من هذه التشغيلة خلال الفترة، المتبقي = الرصيد الحالي" />
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
@@ -230,34 +244,36 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table>
               <thead>
-                <tr className="bg-gray-50 border-b text-right">
-                  {isMinistry && <th className="py-3 px-3">المستشفى</th>}
-                  <th className="py-3 px-3">رقم التشغيلة</th>
-                  <th className="py-3 px-3">تاريخ دخول الطلبية</th>
-                  <th className="py-3 px-3">تاريخ الصلاحية</th>
-                  <th className="py-3 px-3">الوارد</th>
-                  <th className="py-3 px-3">المستخدم</th>
-                  <th className="py-3 px-3">المتبقي</th>
+                <tr className="text-right">
+                  {isMinistry && <th>المستشفى</th>}
+                  <th>رقم التشغيلة</th>
+                  <th>تاريخ دخول الطلبية</th>
+                  <th>تاريخ الصلاحية</th>
+                  <th>الوارد</th>
+                  <th>المستخدم</th>
+                  <th>المتبقي</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map(r => (
-                  <tr key={r.batch_id} className="border-b hover:bg-gray-50">
-                    {isMinistry && <td className="py-2 px-3">{r.hospital_name}</td>}
-                    <td className="py-2 px-3 font-medium">{r.batch_number}</td>
-                    <td className="py-2 px-3">{r.delivery_date}</td>
-                    <td className={`py-2 px-3 ${r.expiry_date < cairoToday() ? 'text-red-600' : ''}`}>{r.expiry_date}</td>
-                    <td className="py-2 px-3">{r.received}</td>
-                    <td className="py-2 px-3">{r.used}</td>
-                    <td className={`py-2 px-3 font-bold ${r.remaining <= 0 ? 'text-red-600' : 'text-green-600'}`}>{r.remaining}</td>
+                  <tr key={r.batch_id}>
+                    {isMinistry && <td>{r.hospital_name}</td>}
+                    <td className="font-medium">{r.batch_number}</td>
+                    <td>{r.delivery_date}</td>
+                    {/* حالة حرجة عند انتهاء الصلاحية (خلفية #fdd) */}
+                    <td className={r.expiry_date < cairoToday() ? 'cell-critical' : ''}>{r.expiry_date}</td>
+                    <td>{r.received}</td>
+                    <td>{r.used}</td>
+                    {/* طبيعي بخلفية #ced إذا بقي رصيد، حرج بخلفية #fdd إذا فرغ */}
+                    <td className={r.remaining <= 0 ? 'cell-critical' : 'cell-normal'}>{r.remaining}</td>
                   </tr>
                 ))}
               </tbody>
               {totals && (
                 <tfoot>
-                  <tr className="bg-gray-50 font-bold">
+                  <tr className="bg-gray-100 font-bold">
                     <td className="py-3 px-3" colSpan={isMinistry ? 4 : 3}>الإجمالي</td>
                     <td className="py-3 px-3">{totals.received}</td>
                     <td className="py-3 px-3">{totals.used}</td>
