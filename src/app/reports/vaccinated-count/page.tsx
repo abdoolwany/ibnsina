@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getHospitalById } from '@/lib/db/hospitals'
-import { getVaccinatorsByHospitals } from '@/lib/db/vaccinators'
-import { getEntryUsersByHospitals } from '@/lib/db/users'
 import AppShell from '@/components/AppShell'
 import VaccinatedCountContent from './VaccinatedCountContent'
 
@@ -22,9 +20,6 @@ export default async function VaccinatedCountPage() {
     hospitals = fetched.filter((h): h is NonNullable<typeof h> => h !== null)
   }
 
-  const vaccinators = await getVaccinatorsByHospitals(user.hospitalIds)
-  const entryUsers = await getEntryUsersByHospitals(user.hospitalIds)
-
   return (
     <AppShell user={user} maxWidth="max-w-7xl">
       <div className="mb-6">
@@ -34,8 +29,6 @@ export default async function VaccinatedCountPage() {
       <VaccinatedCountContent
         hospitals={hospitals}
         userRole={user.role}
-        vaccinators={vaccinators}
-        entryUsers={entryUsers}
       />
     </AppShell>
   )

@@ -6,8 +6,6 @@ import { BarChart3 } from 'lucide-react'
 import { NATIONALITIES } from '@/lib/nationalities'
 import { nationalityToFilterParam } from '@/lib/nationalities'
 import type { Hospital } from '@/types/database'
-import type { Vaccinator } from '@/types/database'
-import type { UserProfile } from '@/types/database'
 
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; title: string; subtitle?: string }) {
   return (
@@ -26,8 +24,6 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; tit
 interface Props {
   hospitals: Hospital[]
   userRole: string
-  vaccinators: Vaccinator[]
-  entryUsers: UserProfile[]
 }
 
 interface VaccinatedStats {
@@ -42,16 +38,13 @@ interface VaccinatedStats {
 }
 
 // تقرير عدد المتطعمين خلال أي مدة (بلا حد 31 يومًا — القسم 9):
-// عرض إحصاءات مجمّعة حسب التوثيق والنوع والجنسية، مع فلترة حسب
-// المستشفى (للوزارة) والقائم بالتطعيم والمدخل.
-export default function VaccinatedCountContent({ hospitals, userRole, vaccinators, entryUsers }: Props) {
+// عرض إحصاءات مجمّعة حسب التوثيق والنوع والجنسية، مع فلترة حسب المستشفى (للوزارة).
+export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
   const [from, setFrom] = useState("")
   const [to, setTo] = useState("")
   const [hospitalId, setHospitalId] = useState("")
   const [nationalityFilter, setNationalityFilter] = useState<'all' | 'egyptian' | 'non_egyptian' | string>('all')
-  const [vaccinatorId, setVaccinatorId] = useState("")
-  const [enteredBy, setEnteredBy] = useState("")
 
   const [stats, setStats] = useState<VaccinatedStats | null>(null)
   const [loading, setLoading] = useState(false)
@@ -78,8 +71,6 @@ export default function VaccinatedCountContent({ hospitals, userRole, vaccinator
       if (hospitalId) p.set('hospital_id', hospitalId)
       const natParam = nationalityToFilterParam(nationalityFilter)
       if (natParam) p.set('nationality', natParam)
-      if (vaccinatorId) p.set('vaccinator_id', vaccinatorId)
-      if (enteredBy) p.set('entered_by', enteredBy)
 
       const res = await fetch(`/api/reports/vaccinated-count?${p.toString()}`)
       if (!res.ok) {
@@ -100,8 +91,6 @@ export default function VaccinatedCountContent({ hospitals, userRole, vaccinator
     setTo("")
     setHospitalId("")
     setNationalityFilter('all')
-    setVaccinatorId("")
-    setEnteredBy("")
     setStats(null)
     setError("")
     setHasSearched(false)
@@ -152,26 +141,6 @@ export default function VaccinatedCountContent({ hospitals, userRole, vaccinator
               <option value="non_egyptian">غير مصري</option>
               {NATIONALITIES.filter(n => !n.startsWith('مصر')).map(n => (
                 <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">القائم بالتطعيم</label>
-            <select value={vaccinatorId} onChange={e => setVaccinatorId(e.target.value)}
-              className="input-field">
-              <option value="">الكل</option>
-              {vaccinators.map(v => (
-                <option key={v.id} value={v.id}>{v.full_name}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">المدخل</label>
-            <select value={enteredBy} onChange={e => setEnteredBy(e.target.value)}
-              className="input-field">
-              <option value="">الكل</option>
-              {entryUsers.map(u => (
-                <option key={u.id} value={u.id}>{u.full_name}</option>
               ))}
             </select>
           </div>

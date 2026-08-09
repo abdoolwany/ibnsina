@@ -26,8 +26,6 @@ export async function GET(request: Request) {
   const to = searchParams.get('to')
   const hospitalId = searchParams.get('hospital_id')
   const nationality = searchParams.get('nationality')
-  const vaccinatorId = searchParams.get('vaccinator_id')
-  const enteredBy = searchParams.get('entered_by')
 
   const profileResult = await (supabase.from('user_profiles').select('role').eq('id', user.id).single() as never) as { data: { role: string } | null }
   const role = profileResult.data?.role
@@ -48,8 +46,6 @@ export async function GET(request: Request) {
     p_to: to,
     p_hospital_id: hospitalId && (role === 'moh_admin' || role === 'moh_level1') ? hospitalId : null,
     p_nationality: nationality,
-    p_vaccinator_id: vaccinatorId,
-    p_entered_by: enteredBy,
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,8 +70,6 @@ export async function GET(request: Request) {
         to,
         hospital_id: hospitalId,
         nationality,
-        vaccinator_id: vaccinatorId,
-        entered_by: enteredBy,
       },
     },
   } as never))

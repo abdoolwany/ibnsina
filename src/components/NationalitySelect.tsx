@@ -42,7 +42,7 @@ export default function NationalitySelect({ value, onChange, required, placehold
         type="text"
         required={required}
         value={query}
-        onFocus={() => { setQuery(value); setOpen(true) }}
+        onFocus={() => { setQuery(""); setOpen(true) }}
         onChange={(e) => { setQuery(e.target.value); setOpen(true) }}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
         placeholder={placeholder}

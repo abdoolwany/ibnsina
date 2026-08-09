@@ -27,7 +27,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
   const [childName, setChildName] = useState(record?.child_full_name ?? "")
   const [childGender, setChildGender] = useState<Gender | "">(record?.child_gender ?? "")
   const [birthDate, setBirthDate] = useState(record?.birth_date ?? "")
-  const [nationality, setNationality] = useState(record?.child_nationality ?? "مصري")
+  const [nationality, setNationality] = useState(record?.child_nationality ?? "")
 
   // بيانات الأب
   const [fatherFirstName, setFatherFirstName] = useState(record?.father_first_name ?? "")
@@ -189,12 +189,12 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات الطفل</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-gray-700">اسم الطفل</label>
+            <label className="block text-sm font-medium text-gray-700">اسم الطفل <span className="text-red-600">*</span></label>
             <input type="text" required value={childName} onChange={e => setChildName(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">النوع</label>
+            <label className="block text-sm font-medium text-gray-700">النوع <span className="text-red-600">*</span></label>
             <select required value={childGender} onChange={e => setChildGender(e.target.value as Gender | "")}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">اختر النوع...</option>
@@ -203,12 +203,12 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">تاريخ الميلاد</label>
+            <label className="block text-sm font-medium text-gray-700">تاريخ الميلاد <span className="text-red-600">*</span></label>
             <input type="date" required value={birthDate} onChange={e => setBirthDate(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">الجنسية</label>
+            <label className="block text-sm font-medium text-gray-700">الجنسية <span className="text-red-600">*</span></label>
             <NationalitySelect value={nationality} onChange={setNationality} required />
           </div>
         </div>
@@ -219,12 +219,12 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات الأب</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الأب</label>
+            <label className="block text-sm font-medium text-gray-700">اسم الأب <span className="text-red-600">*</span></label>
             <input type="text" required value={fatherFirstName} onChange={e => setFatherFirstName(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
+            <label className="block text-sm font-medium text-gray-700">اسم الجد <span className="text-red-600">*</span></label>
             <input type="text" required value={fatherGrandfather} onChange={e => setFatherGrandfather(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
@@ -234,7 +234,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+            <label className="block text-sm font-medium text-gray-700">الرقم القومي <span className="text-red-600">*</span></label>
             <input type="text" required maxLength={14} value={fatherNationalId}
               onChange={e => setFatherNationalId(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
@@ -259,12 +259,12 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات الأم</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الأم</label>
+            <label className="block text-sm font-medium text-gray-700">اسم الأم <span className="text-red-600">*</span></label>
             <input type="text" required value={motherFirstName} onChange={e => setMotherFirstName(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">اسم الجد</label>
+            <label className="block text-sm font-medium text-gray-700">اسم الجد <span className="text-red-600">*</span></label>
             <input type="text" required value={motherGrandfather} onChange={e => setMotherGrandfather(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
@@ -274,7 +274,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">الرقم القومي</label>
+            <label className="block text-sm font-medium text-gray-700">الرقم القومي <span className="text-red-600">*</span> <span className="text-xs text-gray-400 font-normal">(أو الجواز)</span></label>
             <input type="text" maxLength={14} value={motherNationalId}
               onChange={e => setMotherNationalId(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
@@ -300,12 +300,12 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
         <h3 className="text-lg font-semibold mb-4 border-b pb-2">بيانات التطعيم</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700">تاريخ التطعيم</label>
+            <label className="block text-sm font-medium text-gray-700">تاريخ التطعيم <span className="text-red-600">*</span></label>
             <input type="date" required value={vaccinationDate} onChange={e => setVaccinationDate(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">دفعة اللقاح</label>
+            <label className="block text-sm font-medium text-gray-700">دفعة اللقاح <span className="text-red-600">*</span></label>
             <select required value={batchId} onChange={e => setBatchId(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">اختر الدفعة...</option>
@@ -317,7 +317,7 @@ export default function ChildRegistrationForm({ hospitalId, batches, vaccinators
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">القائم بالتطعيم</label>
+            <label className="block text-sm font-medium text-gray-700">القائم بالتطعيم <span className="text-red-600">*</span></label>
             <select required value={vaccinatorId} onChange={e => setVaccinatorId(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
               <option value="">اختر القائم بالتطعيم...</option>
