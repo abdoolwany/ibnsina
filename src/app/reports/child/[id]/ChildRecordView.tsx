@@ -186,42 +186,41 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded-lg">{error}</div>
       )}
 
-      {/* شريط الإجراءات — تظهر الأزرار حسب صلاحية ومستوى المستخدم (بند 5) */}
-      {(canManage || canVerify || exporting) && (
-        <div className="card p-4 flex flex-wrap items-center gap-2">
-          <div className="ml-auto flex flex-wrap gap-2">
-            {canManage && (
-              <>
-                <Link href={editPath} className="btn btn-secondary">
-                  <Pencil size={16} /> تعديل
-                </Link>
-                <button onClick={handleDelete} disabled={action === 'delete'}
-                  className="btn btn-danger">
-                  <Trash2 size={16} /> {action === 'delete' ? 'جاري الحذف...' : 'حذف'}
-                </button>
-              </>
-            )}
-            {canVerify && !record.is_verified && (
-              <button onClick={handleVerify} disabled={action === 'verify'}
-                className="btn btn-success">
-                <CheckCircle2 size={16} /> {action === 'verify' ? 'جاري التوثيق...' : 'توثيق'}
+      {/* شريط الإجراءات — زر تنزيل PDF متاح لكل الأدوار (قراءة فقط)،
+          أما أزرار التعديل/الحذف/التوثيق فحسب صلاحية ومستوى المستخدم (بند 5) */}
+      <div className="card p-4 flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex flex-wrap gap-2">
+          {canManage && (
+            <>
+              <Link href={editPath} className="btn btn-secondary">
+                <Pencil size={16} /> تعديل
+              </Link>
+              <button onClick={handleDelete} disabled={action === 'delete'}
+                className="btn btn-danger">
+                <Trash2 size={16} /> {action === 'delete' ? 'جاري الحذف...' : 'حذف'}
               </button>
-            )}
-            {canVerify && record.is_verified && requestStatus === 'pending' && (
-              <span className="badge badge-warning">بانتظار رد الوزارة على إعادة الفتح</span>
-            )}
-            {canVerify && record.is_verified && requestStatus !== 'pending' && (
-              <button onClick={handleRequestUnverify} disabled={action === 'unverify'}
-                className="btn btn-warning">
-                <LockOpen size={16} /> {action === 'unverify' ? 'جاري الإرسال...' : 'طلب إعادة فتح التوثيق'}
-              </button>
-            )}
-            <button onClick={handleDownload} disabled={exporting} className="btn btn-danger">
-              {exporting ? 'جاري التنزيل...' : 'تنزيل PDF'}
+            </>
+          )}
+          {canVerify && !record.is_verified && (
+            <button onClick={handleVerify} disabled={action === 'verify'}
+              className="btn btn-success">
+              <CheckCircle2 size={16} /> {action === 'verify' ? 'جاري التوثيق...' : 'توثيق'}
             </button>
-          </div>
+          )}
+          {canVerify && record.is_verified && requestStatus === 'pending' && (
+            <span className="badge badge-warning">بانتظار رد الوزارة على إعادة الفتح</span>
+          )}
+          {canVerify && record.is_verified && requestStatus !== 'pending' && (
+            <button onClick={handleRequestUnverify} disabled={action === 'unverify'}
+              className="btn btn-warning">
+              <LockOpen size={16} /> {action === 'unverify' ? 'جاري الإرسال...' : 'طلب إعادة فتح التوثيق'}
+            </button>
+          )}
+          <button onClick={handleDownload} disabled={exporting} className="btn btn-danger">
+            {exporting ? 'جاري التنزيل...' : 'تنزيل PDF'}
+          </button>
         </div>
-      )}
+      </div>
 
       <div className="card p-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
