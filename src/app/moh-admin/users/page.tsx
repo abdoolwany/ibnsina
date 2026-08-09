@@ -13,8 +13,8 @@ export default async function UsersPage() {
     <DashboardShell allowedRoles={['moh_admin']}>
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">إدارة المستخدمين</h2>
-        <p className="text-gray-600">إنشاء حسابات جديدة وتحديد الأدوار والصلاحيات</p>
-        <UserManager hospitals={hospitals} currentUserId={user.id} />
+        <p className="text-gray-600">إنشاء الحسابات الدنيا (مدخل، موثق، مستوى أول) وتحديد الصلاحيات — إدارة حسابات الإدارة العليا ومدير النظام حصرية لمدير النظام</p>
+        <UserManager hospitals={hospitals} currentUserId={user.id} managerRole="moh_admin" />
       </div>
     </DashboardShell>
   )

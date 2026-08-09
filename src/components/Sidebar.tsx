@@ -48,6 +48,10 @@ function getNavItems(role: string): NavItem[] {
     items.push({ href: '/moh-admin/users', label: 'المستخدمون', icon: Users, matchExact: true })
   }
 
+  if (role === 'system_operator') {
+    items.push({ href: '/system-operator/users', label: 'المستخدمون', icon: Users, matchExact: true })
+  }
+
   if (role !== 'system_operator') {
     items.push({ href: '/reports', label: 'التقارير والبحث', icon: FileText, matchExact: true })
     items.push({ href: '/reports/batches', label: 'حركة الطعوم', icon: Activity, matchExact: true })

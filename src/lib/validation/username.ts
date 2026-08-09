@@ -10,6 +10,20 @@ export function isValidUsername(username: string): boolean {
   return USERNAME_REGEX.test(username)
 }
 
+/**
+ * تطبيع اسم المستخدم العربي قبل التجزئة حتى تتكافأ الهمزات والتاء المربوطة
+ * والألف المقصورة (مثال: إدارة = ادارة = اداره = إداره).
+ * يمنع فشل تسجيل الدخول عند اختلاف طريقة كتابة الاسم من جهاز لآخر.
+ */
+export function normalizeArabicUsername(username: string): string {
+  return username
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/ة/g, 'ه')
+    .replace(/ى/g, 'ي')
+    .replace(/[\u064B-\u065F\u0670]/g, '') // حذف الحركات والتنوين والشدة
+    .toLowerCase()
+}
+
 // دالة تجزئة حتمية صغيرة (cyrb53) — تُستخدم لاشتقاق بريد داخلي صالح
 // من أسماء مستخدم عربية (Supabase Auth يتطلب بريدًا إلكترونيًا بنطاق ASCII).
 // لا نحتاج عكسها: تسجيل الدخول يشتق البريد نفسه من الاسم ذاته.
@@ -33,7 +47,7 @@ function hashHex(input: string): string {
  * من خلال تجزئة حتمية لضمان التفرّد دون تجاوز حدود البريد الإلكتروني.
  */
 export function usernameToEmail(username: string): string {
-  const u = username.toLowerCase()
+  const u = normalizeArabicUsername(username)
   if (/^[a-z0-9._-]{1,64}$/.test(u)) return `${u}@vaccine.local`
   return `u${hashHex(u)}@vaccine.local`
 }

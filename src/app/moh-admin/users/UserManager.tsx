@@ -20,7 +20,12 @@ const roleLabels: Record<UserRole, string> = {
   system_operator: 'مشغل النظام',
 }
 
-export default function UserManager({ hospitals, currentUserId }: { hospitals: Hospital[]; currentUserId: string }) {
+// الأدوار التي يستطيع كل مدير إنشاؤها/تعديلها (تتوافق مع /api/admin/users)
+// system_operator: كل الأدوار. moh_admin: الحسابات الدنيا فقط ولا يرى مشغل النظام.
+const ALL_ROLES: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1', 'moh_admin', 'system_operator']
+const MOH_ADMIN_MANAGED_ROLES: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1']
+
+export default function UserManager({ hospitals, currentUserId, managerRole }: { hospitals: Hospital[]; currentUserId: string; managerRole: 'moh_admin' | 'system_operator' }) {
   const router = useRouter()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,6 +43,8 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
   const [fullName, setFullName] = useState("")
   const [role, setRole] = useState<UserRole>('hospital_entry')
   const [selectedHospitals, setSelectedHospitals] = useState<string[]>([])
+
+  const manageableRoles = managerRole === 'system_operator' ? ALL_ROLES : MOH_ADMIN_MANAGED_ROLES
 
   async function loadUsers() {
     const res = await fetch('/api/admin/users')
@@ -111,6 +118,9 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
     setEditPassword("")
   }
 
+  // moh_admin لا يرى حسابات moh_admin أو system_operator في القائمة إطلاقًا
+  const visibleUsers = managerRole === 'system_operator' ? users : users.filter(u => manageableRoles.includes(u.role))
+
   if (loading) return <p className="text-gray-500">جاري التحميل...</p>
 
   return (
@@ -142,8 +152,8 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
               <label className="block text-sm font-medium text-gray-700">الدور</label>
               <select value={role} onChange={e => setRole(e.target.value as UserRole)}
                 className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm">
-                {Object.entries(roleLabels).map(([key, label]) => (
-                  <option key={key} value={key}>{label}</option>
+                {manageableRoles.map(key => (
+                  <option key={key} value={key}>{roleLabels[key]}</option>
                 ))}
               </select>
             </div>
@@ -179,7 +189,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
             </tr>
           </thead>
           <tbody>
-            {users.map(u => (
+            {visibleUsers.map(u => (
               <tr key={u.id} className="border-b hover:bg-gray-50">
                 <td className="py-3 px-4 font-mono text-xs">
                   {editingId === u.id ? (
@@ -197,8 +207,8 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                         className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm" />
                       <select value={editRole} onChange={e => setEditRole(e.target.value as UserRole)}
                         className="w-full rounded-lg border border-gray-300 px-2 py-1 text-sm">
-                        {Object.entries(roleLabels).map(([key, label]) => (
-                          <option key={key} value={key}>{label}</option>
+                        {manageableRoles.map(key => (
+                          <option key={key} value={key}>{roleLabels[key]}</option>
                         ))}
                       </select>
                       <input type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)}
@@ -220,7 +230,7 @@ export default function UserManager({ hospitals, currentUserId }: { hospitals: H
                 </td>
                 <td className="py-3 px-4">
                   <div className="flex flex-wrap gap-1">
-                    {u.role !== 'moh_admin' && u.role !== 'system_operator' && hospitals.map(h => (
+                    {manageableRoles.includes(u.role) && hospitals.map(h => (
                       <button key={h.id}
                         onClick={() => handleUpdateLinks(u.id, toggleHospital(u.user_hospital_links?.map(l => l.hospital_id) ?? [], h.id))}
                         className={`text-xs px-2 py-0.5 rounded border ${(u.user_hospital_links || []).some(l => l.hospital_id === h.id) ? 'bg-green-100 border-green-300 text-green-700' : 'bg-gray-100 border-gray-200 text-gray-500'}`}>

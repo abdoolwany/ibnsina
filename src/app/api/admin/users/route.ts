@@ -3,27 +3,44 @@ import { createServerSupabase, createServiceRoleClient } from '@/lib/supabase/se
 import { isValidUsername, usernameToEmail } from '@/lib/validation'
 import type { UserRole } from '@/types/database'
 
-export async function GET() {
+// الأدوار التي يديرها كل نوع من المديرين.
+// system_operator: كامل النظام (كل الأدوار). moh_admin: الحسابات الدنيا فقط.
+const ALL_ROLES: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1', 'moh_admin', 'system_operator']
+const MOH_ADMIN_MANAGED_ROLES: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1']
+const MANAGER_ROLES = ['moh_admin', 'system_operator']
+
+function managedRolesFor(managerRole: string): UserRole[] | null {
+  if (managerRole === 'system_operator') return ALL_ROLES
+  if (managerRole === 'moh_admin') return MOH_ADMIN_MANAGED_ROLES
+  return null
+}
+
+async function getManagerRole(): Promise<{ role: string; userId: string } | null> {
   const supabase = await createServerSupabase()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
-
+  if (!user) return null
   const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
-  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  if (!profile || !MANAGER_ROLES.includes(profile.role)) return null
+  return { role: profile.role, userId: user.id }
+}
+
+export async function GET() {
+  const manager = await getManagerRole()
+  if (!manager) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
 
   const admin = await createServiceRoleClient()
   const { data: users } = await admin.from('user_profiles').select('*, user_hospital_links(hospital_id)')
 
-  return NextResponse.json({ users })
+  // moh_admin لا يرى حسابات moh_admin الأخرى ولا حسابات system_operator إطلاقًا
+  const allowed = managedRolesFor(manager.role)!
+  const filtered = (users ?? []).filter(u => allowed.includes((u as { role: UserRole }).role))
+
+  return NextResponse.json({ users: filtered })
 }
 
 export async function POST(request: Request) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
-
-  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
-  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  const manager = await getManagerRole()
+  if (!manager) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
 
   const { username, password, fullName, role, hospitalIds } = await request.json()
 
@@ -35,9 +52,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'اسم المستخدم غير صالح (3-30 حرفًا: أحرف، أرقام، . _ - بدون @)' }, { status: 400 })
   }
 
-  const validRoles: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1', 'moh_admin', 'system_operator']
-  if (!validRoles.includes(role)) {
-    return NextResponse.json({ error: 'دور غير صحيح' }, { status: 400 })
+  const allowed = managedRolesFor(manager.role)!
+  if (!allowed.includes(role)) {
+    return NextResponse.json({ error: manager.role === 'moh_admin' ? 'لا يمكنك إنشاء حسابات بهذا الدور' : 'دور غير صحيح' }, { status: 403 })
   }
 
   const admin = await createServiceRoleClient()
@@ -85,15 +102,23 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
-
-  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
-  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  const manager = await getManagerRole()
+  if (!manager) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
 
   const { userId, role, fullName, username, hospitalIds, newPassword } = await request.json()
   const admin = await createServiceRoleClient()
+
+  // التحقق من صلاحية المدير تجاه الحساب المستهدف (دوره الحالي والمطلوب)
+  const { data: target } = await admin.from('user_profiles').select('role').eq('id', userId).maybeSingle()
+  if (!target) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 })
+
+  const allowed = managedRolesFor(manager.role)!
+  if (!allowed.includes((target as { role: UserRole }).role)) {
+    return NextResponse.json({ error: 'لا يمكنك تعديل حسابات بهذا الدور' }, { status: 403 })
+  }
+  if (role && !allowed.includes(role)) {
+    return NextResponse.json({ error: 'لا يمكنك منح هذا الدور' }, { status: 403 })
+  }
 
   if (newPassword !== undefined) {
     if (typeof newPassword !== 'string' || newPassword.length < 6) {
@@ -140,21 +165,25 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const supabase = await createServerSupabase()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
-
-  const { data: profile } = await supabase.from('user_profiles').select('role').eq('id', user.id).single() as never as { data: { role: string } | null }
-  if (profile?.role !== 'moh_admin') return NextResponse.json({ error: 'غير مصرح' }, { status: 403 })
+  const manager = await getManagerRole()
+  if (!manager) return NextResponse.json({ error: 'غير مصرح' }, { status: 401 })
 
   const { userId } = await request.json()
   if (!userId) return NextResponse.json({ error: 'معرّف المستخدم مطلوب' }, { status: 400 })
 
-  if (userId === user.id) {
+  if (userId === manager.userId) {
     return NextResponse.json({ error: 'لا يمكنك حذف حسابك الحالي' }, { status: 400 })
   }
 
   const admin = await createServiceRoleClient()
+
+  // moh_admin لا يستطيع حذف حسابات moh_admin أو system_operator
+  const { data: target } = await admin.from('user_profiles').select('role').eq('id', userId).maybeSingle()
+  if (!target) return NextResponse.json({ error: 'المستخدم غير موجود' }, { status: 404 })
+  const allowed = managedRolesFor(manager.role)!
+  if (!allowed.includes((target as { role: UserRole }).role)) {
+    return NextResponse.json({ error: 'لا يمكنك حذف حسابات بهذا الدور' }, { status: 403 })
+  }
 
   // 1) قوائم التطعيم التي أضافها المستخدم:
   //    تُحذف تلقائيًا إن لم تكن مرتبطة بأي سجل أطفال، وإلا نمنع الحذف برسالة واضحة
