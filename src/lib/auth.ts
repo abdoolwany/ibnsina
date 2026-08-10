@@ -20,6 +20,23 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   const profileResult = await (supabase.from('user_profiles').select('role, full_name').eq('id', user.id).single() as any)
   const profile = profileResult.data as { role: UserRole; full_name: string } | null
 
+  // الأدوار العالمية (الإدارة العليا ومدير النظام) مرتبطة بالنظام كله، فلا نعتمد
+  // على روابط ذاتية (قد تكون فارغة) في hospitalIds: نعيد كل المستشفيات حتى تعمل
+  // فلاتر التقارير (القائم بالتطعيم/المدخل) لديهم لكل مستشفى دون قوائم فارغة.
+  if (profile?.role === 'moh_admin' || profile?.role === 'system_operator') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allHospitalsResult = await (supabase.from('hospitals').select('id') as any)
+    const allIds: string[] = (allHospitalsResult.data ?? []).map((h: { id: string }) => h.id)
+    return {
+      id: user.id,
+      email: user.email ?? '',
+      role: profile.role,
+      fullName: profile.full_name ?? null,
+      hospitalIds: allIds,
+      hospitalNames: [],
+    }
+  }
+
   // نقرأ روابط المستخدم الحالي فقط صراحة (لا نعتمد على RLS وحده): سياسات قراءة
   // روابط المستشفيات تُدمج بـ OR (users_read_own_links + سياسات 028 الخاصة
   // بمستشفيات الدور)، فبدون فلتر user_id تعود كل روابط مستشفيات المستخدم
