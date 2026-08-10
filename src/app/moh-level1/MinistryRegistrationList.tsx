@@ -11,18 +11,16 @@ interface Props {
   hospitals: Array<{ id: string; name: string }>
 }
 
-// قائمة السجلات الموثّقة في مستشفيات moh_level1 المرتبطة لعرض حالة "تسجيل الميكنة"
-// والانتقال للسجل الفردي لتنفيذ التسجيل/التراجع. الفلترة هنا حسب المستشفى فقط
+// قائمة السجلات الموثّقة غير المسجّلة على الميكنة فقط، لتبسيط العرض على الصفحة الرئيسية.
+// السجل الذي يُسجَّل على الميكنة يختفي من هنا، ولتغيير حالته تُبحث عنه من التقارير
 // (البيانات تُجلب من الخادم محصورة بمستشفياته عبر RLS).
 export default function MinistryRegistrationList({ records, hospitals }: Props) {
   const [hospitalFilter, setHospitalFilter] = useState("")
 
+  const pending = records.filter(r => !r.ministry_registered)
   const filtered = hospitalFilter
-    ? records.filter(r => r.hospital_id === hospitalFilter)
-    : records
-
-  const pending = filtered.filter(r => !r.ministry_registered)
-  const registered = filtered.filter(r => r.ministry_registered)
+    ? pending.filter(r => r.hospital_id === hospitalFilter)
+    : pending
 
   return (
     <div className="card p-4 space-y-4">
@@ -30,7 +28,7 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
         <div>
           <h3 className="text-lg font-semibold">تسجيل الجرعات على ميكنة التطعيمات</h3>
           <p className="text-sm text-gray-500">
-            السجلات الموثّقة فقط — سجّل الجرعة بعد ضخّها في الميكنة، ويمكنك التراجع عند الخطأ
+            السجلات الموثّقة غير المسجّلة فقط — سجّل الجرعة بعد ضخّها في الميكنة. المسجّل يُدار من البحث في التقارير
           </p>
         </div>
         <select value={hospitalFilter} onChange={e => setHospitalFilter(e.target.value)}
@@ -42,19 +40,15 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
         </select>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-4 text-center">
-          <div className="text-2xl font-bold text-amber-600">{pending.length}</div>
-          <div className="text-sm text-gray-600">بانتظار تسجيل الميكنة</div>
-        </div>
-        <div className="card p-4 text-center">
-          <div className="text-2xl font-bold text-green-600">{registered.length}</div>
-          <div className="text-sm text-gray-600">مسجّل على الميكنة</div>
-        </div>
+      <div className="card p-4 text-center max-w-xs">
+        <div className="text-2xl font-bold text-amber-600">{filtered.length}</div>
+        <div className="text-sm text-gray-600">بانتظار تسجيل الميكنة</div>
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-gray-500 text-center py-6">لا توجد سجلات موثّقة بعد</p>
+        <p className="text-gray-500 text-center py-6">
+          {records.length === 0 ? 'لا توجد سجلات موثّقة بانتظار التسجيل' : 'لا توجد سجلات في هذا المستشفى'}
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table>
@@ -64,7 +58,6 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
                 <th>اسم الطفل</th>
                 <th>تاريخ التطعيم</th>
                 <th>تاريخ التوثيق</th>
-                <th>حالة الميكنة</th>
                 <th></th>
               </tr>
             </thead>
@@ -75,11 +68,6 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
                   <td className="font-medium">{r.child_full_name}</td>
                   <td>{r.vaccination_date}</td>
                   <td>{r.verified_at ? new Date(r.verified_at).toLocaleDateString('ar-EG') : '-'}</td>
-                  <td>
-                    <span className={r.ministry_registered ? 'status-verified' : 'status-unverified'}>
-                      {r.ministry_registered ? 'مسجّل' : 'غير مسجّل'}
-                    </span>
-                  </td>
                   <td>
                     <Link href={`/reports/child/${r.id}`} className="btn-soft px-3 py-1">
                       فتح السجل

@@ -343,6 +343,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
       entered_by_name: r.entered_by_name ?? '',
       batch_number: r.vaccine_batches?.batch_number ?? '',
       batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
+      is_verified: r.is_verified,
       ministry_registered: r.ministry_registered,
       ministry_status: r.ministry_registered ? 'مسجّل' : 'غير مسجّل',
     }))

@@ -35,7 +35,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: 700 },
   subtitle: { fontSize: 10, marginTop: 4, color: '#333' },
   summaryRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-around',
     marginBottom: 14,
     borderWidth: 1,
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   summaryValue: { fontSize: 15, fontWeight: 700 },
   summaryLabel: { fontSize: 9, marginTop: 2 },
   tableRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
   },
@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   totalsRow: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     fontWeight: 700,
     backgroundColor: '#ececec',
     borderBottomWidth: 1,
@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     textAlign: 'right',
   },
-  fieldRow: { flexDirection: 'row', marginBottom: 4, textAlign: 'right' },
+  fieldRow: { flexDirection: 'row-reverse', marginBottom: 4, textAlign: 'right' },
   fieldLabel: { width: 160, fontWeight: 700 },
   fieldValue: { flex: 1 },
 })
@@ -165,6 +165,7 @@ export interface ChildReportRow {
   entered_by_name?: string
   batch_number: string
   batch_delivery_date: string
+  is_verified?: boolean
   ministry_registered?: boolean
   ministry_status?: string
 }
@@ -194,6 +195,7 @@ export function ChildrenReportPdf({ rows, isMinistry, dateRange, hospitalName, t
     { header: 'المدخل', flex: 1.3, render: (r) => r.entered_by_name || '-' },
     { header: 'رقم التشغيلة', flex: 1.2, render: (r) => r.batch_number },
     { header: 'تاريخ دخول الطلبية', flex: 1, render: (r) => r.batch_delivery_date || '-' },
+    { header: 'الحالة', flex: 1, render: (r) => (r.is_verified ? 'موثّق' : 'غير موثّق') },
   )
   if (isMinistry) columns.push({ header: 'الميكنة', flex: 1.1, render: (r) => r.ministry_registered ? 'مسجّل' : 'غير مسجّل' })
 
