@@ -56,16 +56,18 @@ interface HospitalStat {
 
 type SortKey = 'child_name' | 'birth_date' | 'father_name' | 'mother_name' | 'vaccination_date' | 'hospital' | 'created_at'
 
-interface NamedOption {
+// خيار مرتبط بمستشفى محدّد — لفلترَي "القائم بالتطعيم" و"المدخل" في التقارير
+interface HospitalScopedOption {
   id: string
   full_name: string
+  hospital_id: string
 }
 
 interface Props {
   hospitals: Hospital[]
   userRole: UserRole | null
-  vaccinators: NamedOption[]
-  entryUsers: NamedOption[]
+  vaccinators: HospitalScopedOption[]
+  entryUsers: HospitalScopedOption[]
 }
 
 const PAGE_SIZES = [10, 20, 50] as const
@@ -156,6 +158,17 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
   const printRef = useRef<HTMLDivElement>(null)
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
+
+  // فلترا "القائم بالتطعيم" و"المدخل" يعملان فقط عند تحديد مستشفى معيّن
+  // (لحسابات الوزارة). حسابات المستشفيات مرتبطة بمستشفاها تلقائيًا فيبقى
+  // الفلتران مفعّلين لديهم دائمًا وتُعرض خيارات مستشفاهم فقط.
+  const filtersDisabled = isMinistry && !hospitalId
+  const vaccinatorOptions = isMinistry
+    ? (hospitalId ? vaccinators.filter(v => v.hospital_id === hospitalId) : [])
+    : vaccinators
+  const entryUserOptions = isMinistry
+    ? (hospitalId ? entryUsers.filter(u => u.hospital_id === hospitalId) : [])
+    : entryUsers
 
   // إفراغ حالة الطباعة بعد انتهاء الطباعة الفعلية
   useEffect(() => {
@@ -460,7 +473,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
           {isMinistry && (
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
-              <select value={hospitalId} onChange={e => setHospitalId(e.target.value)}
+              <select value={hospitalId} onChange={e => { setHospitalId(e.target.value); setVaccinatorId(""); setEnteredBy("") }}
                 className="input-field">
                 <option value="">كل المستشفيات</option>
                 {hospitals.map(h => (
@@ -594,6 +607,11 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
 
             {/* التطعيم */}
             <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">التطعيم</h4>
+            {filtersDisabled && (
+              <p className="text-xs text-red-600 mb-2">
+                فلترا «القائم بالتطعيم» و«المدخل» يعملان فقط عند تحديد مستشفى معيّن من فلتر المستشفى أعلاه
+              </p>
+            )}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
@@ -603,9 +621,10 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
               <div>
                 <label className="block text-sm font-medium text-gray-700">القائم بالتطعيم</label>
                 <select value={vaccinatorId} onChange={e => setVaccinatorId(e.target.value)}
-                  className="input-field">
+                  disabled={filtersDisabled}
+                  className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed">
                   <option value="">الكل</option>
-                  {vaccinators.map(v => (
+                  {vaccinatorOptions.map(v => (
                     <option key={v.id} value={v.id}>{v.full_name}</option>
                   ))}
                 </select>
@@ -613,9 +632,10 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
               <div>
                 <label className="block text-sm font-medium text-gray-700">المدخل (أدخل السجل)</label>
                 <select value={enteredBy} onChange={e => setEnteredBy(e.target.value)}
-                  className="input-field">
+                  disabled={filtersDisabled}
+                  className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed">
                   <option value="">الكل</option>
-                  {entryUsers.map(u => (
+                  {entryUserOptions.map(u => (
                     <option key={u.id} value={u.id}>{u.full_name}</option>
                   ))}
                 </select>
