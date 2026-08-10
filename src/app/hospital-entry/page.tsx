@@ -24,7 +24,7 @@ export default async function HospitalEntryPage() {
             <h2 className="text-2xl font-bold">لوحة مدخل البيانات</h2>
             <p className="text-gray-600">{hospital?.name}</p>
           </div>
-          <Link href="/hospital-entry/new" className="btn btn-primary">
+          <Link href="/hospital-entry/new" target="_blank" rel="noopener noreferrer" className="btn btn-primary">
             + تسجيل طفل جديد
           </Link>
         </div>

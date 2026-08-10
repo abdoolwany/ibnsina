@@ -38,7 +38,7 @@ export default async function MohLevel1Page() {
             <h2 className="text-2xl font-bold">لوحة وزارة الصحة - مستوى أول</h2>
             <p className="text-gray-600">إدارة الشحنات ومراجعة التقارير للمستشفيات المرتبطة</p>
           </div>
-          <Link href="/moh-level1/batches/new" className="btn btn-primary">إضافة طلبية جديدة</Link>
+          <Link href="/moh-level1/batches/new" target="_blank" rel="noopener noreferrer" className="btn btn-primary">إضافة طلبية جديدة</Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

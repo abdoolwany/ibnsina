@@ -69,7 +69,7 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
                   <td>{r.vaccination_date}</td>
                   <td>{r.verified_at ? new Date(r.verified_at).toLocaleDateString('ar-EG') : '-'}</td>
                   <td>
-                    <Link href={`/reports/child/${r.id}`} className="btn-soft px-3 py-1">
+                    <Link href={`/reports/child/${r.id}`} target="_blank" rel="noopener noreferrer" className="btn-soft px-3 py-1">
                       فتح السجل
                     </Link>
                   </td>

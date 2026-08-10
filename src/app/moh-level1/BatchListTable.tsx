@@ -80,6 +80,7 @@ export default function BatchListTable({ balances }: { balances: BatchBalanceVie
                     {b.used_quantity === 0 ? (
                       <div className="flex gap-2">
                         <Link href={`/moh-level1/batches/${b.batch_id}/edit`}
+                          target="_blank" rel="noopener noreferrer"
                           className="btn-soft px-3 py-1">
                           تعديل
                         </Link>

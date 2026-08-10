@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useRef, useEffect, type ElementType } from "react"
-import { useRouter } from "next/navigation"
 import { Search, Filter, Printer, RotateCcw, ChevronRight, ChevronLeft, ChevronsRight, ChevronsLeft, Baby } from "lucide-react"
 import type { UserRole, Hospital } from "@/types/database"
 import { downloadExcel } from "@/lib/reports/exportUtils"
@@ -109,7 +108,6 @@ function SectionHeader({ icon: Icon, title, subtitle }: { icon: ElementType; tit
 }
 
 export default function ReportsContent({ hospitals, userRole, vaccinators, entryUsers }: Props) {
-  const router = useRouter()
   const [dateFrom, setDateFrom] = useState("")
   const [dateTo, setDateTo] = useState("")
   const [dateType, setDateType] = useState<'birth_date' | 'created_at'>('birth_date')
@@ -706,7 +704,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
           <div className="p-4 border-b flex flex-wrap items-center justify-between gap-2 print:hidden">
             <div>
               <h3 className="font-semibold">نتائج البحث ({total} سجل)</h3>
-              <p className="text-xs text-gray-500 mt-1">اضغط على أي صف لفتح سجل الطفل كاملًا — كل الإجراءات داخله</p>
+              <p className="text-xs text-gray-500 mt-1">اضغط على أي صف لفتح سجل الطفل كاملًا في تبويب جديد — تبقى نتائج البحث كما هي</p>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={handleExportExcel} disabled={exporting !== ''}
@@ -743,7 +741,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
               </thead>
               <tbody>
                 {records.map(r => (
-                  <tr key={r.id} className="row-clickable" onClick={() => router.push(`/reports/child/${r.id}`)}>
+                  <tr key={r.id} className="row-clickable" onClick={() => window.open(`/reports/child/${r.id}`, '_blank', 'noopener,noreferrer')}>
                     {isMinistry && <td>{r.hospitals?.name ?? '-'}</td>}
                     <td className="font-medium">{r.child_full_name}</td>
                     <td>{r.birth_date}</td>

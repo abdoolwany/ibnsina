@@ -223,7 +223,7 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
         <div className="ml-auto flex flex-wrap gap-2">
           {canManage && (
             <>
-              <Link href={editPath} className="btn btn-secondary">
+              <Link href={editPath} target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
                 <Pencil size={16} /> تعديل
               </Link>
               <button onClick={handleDelete} disabled={action === 'delete'}

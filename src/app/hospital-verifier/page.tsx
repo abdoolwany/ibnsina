@@ -29,7 +29,7 @@ export default async function HospitalVerifierPage() {
             <h2 className="text-2xl font-bold">لوحة الموثق</h2>
             <p className="text-gray-600">{hospital?.name}</p>
           </div>
-          <Link href="/hospital-verifier/vaccinators" className="btn btn-secondary">
+          <Link href="/hospital-verifier/vaccinators" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">
             إدارة القائمين بالتطعيم
           </Link>
         </div>
