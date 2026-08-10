@@ -159,9 +159,10 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
 
-  // فلترا "القائم بالتطعيم" و"المدخل" يعملان فقط عند تحديد مستشفى معيّن
-  // (لحسابات الوزارة). حسابات المستشفيات مرتبطة بمستشفاها تلقائيًا فيبقى
-  // الفلتران مفعّلين لديهم دائمًا وتُعرض خيارات مستشفاهم فقط.
+  // فلتر "رقم التشغيلة (Lot)" وفلترا "القائم بالتطعيم" و"المدخل" يعملون فقط
+  // عند تحديد مستشفى معيّن (لحسابات الوزارة). حسابات المستشفيات مرتبطة
+  // بمستشفاها تلقائيًا فيبقى الفلتران مفعّلين لديهم دائمًا وتُعرض خيارات
+  // مستشفاهم فقط.
   const filtersDisabled = isMinistry && !hospitalId
   const vaccinatorOptions = isMinistry
     ? (hospitalId ? vaccinators.filter(v => v.hospital_id === hospitalId) : [])
@@ -473,7 +474,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
           {isMinistry && (
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
-              <select value={hospitalId} onChange={e => { setHospitalId(e.target.value); setVaccinatorId(""); setEnteredBy("") }}
+              <select value={hospitalId} onChange={e => { setHospitalId(e.target.value); setBatchNumber(""); setVaccinatorId(""); setEnteredBy("") }}
                 className="input-field">
                 <option value="">كل المستشفيات</option>
                 {hospitals.map(h => (
@@ -609,14 +610,15 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
             <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">التطعيم</h4>
             {filtersDisabled && (
               <p className="text-xs text-red-600 mb-2">
-                فلترا «القائم بالتطعيم» و«المدخل» يعملان فقط عند تحديد مستشفى معيّن من فلتر المستشفى أعلاه
+                فلتر «رقم التشغيلة (Lot)» وفلترا «القائم بالتطعيم» و«المدخل» يعملون فقط عند تحديد مستشفى معيّن من فلتر المستشفى أعلاه
               </p>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
                 <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
-                  className="input-field" />
+                  disabled={filtersDisabled}
+                  className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">القائم بالتطعيم</label>

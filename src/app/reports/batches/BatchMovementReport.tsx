@@ -53,6 +53,10 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
 
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
 
+  // فلتر "رقم التشغيلة (Lot)" يعمل فقط عند تحديد مستشفى معيّن (لحسابات الوزارة).
+  // حسابات المستشفيات مرتبطة بمستشفاها تلقائيًا فيبقى مفعّلًا لديهم دائمًا.
+  const filtersDisabled = isMinistry && !hospitalId
+
   const runSearch = useCallback(async (showEmptied: boolean) => {
     setError("")
 
@@ -181,12 +185,13 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
           <div>
             <label className="block text-sm font-medium text-gray-700">رقم التشغيلة (Lot)</label>
             <input type="text" value={batchNumber} onChange={e => setBatchNumber(e.target.value)}
-              className="input-field" />
+              disabled={filtersDisabled}
+              className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
-          {userRole === 'moh_admin' && (
+          {isMinistry && (
             <div>
               <label className="block text-sm font-medium text-gray-700">المستشفى</label>
-              <select value={hospitalId} onChange={e => setHospitalId(e.target.value)}
+              <select value={hospitalId} onChange={e => { setHospitalId(e.target.value); setBatchNumber("") }}
                 className="input-field">
                 <option value="">كل المستشفيات</option>
                 {hospitals.map(h => (
@@ -196,6 +201,11 @@ export default function BatchMovementReport({ hospitals, userRole }: Props) {
             </div>
           )}
         </div>
+        {filtersDisabled && (
+          <p className="text-xs text-red-600 mb-2">
+            فلتر «رقم التشغيلة (Lot)» يعمل فقط عند تحديد مستشفى معيّن من فلتر المستشفى أعلاه
+          </p>
+        )}
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-3 text-sm text-gray-700 cursor-pointer select-none">
             <span className="toggle">
