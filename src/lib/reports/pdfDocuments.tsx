@@ -165,6 +165,8 @@ export interface ChildReportRow {
   entered_by_name?: string
   batch_number: string
   batch_delivery_date: string
+  ministry_registered?: boolean
+  ministry_status?: string
 }
 
 interface ChildrenReportPdfProps {
@@ -191,8 +193,9 @@ export function ChildrenReportPdf({ rows, isMinistry, dateRange, hospitalName, t
     { header: 'القائم بالتطعيم', flex: 1.3, render: (r) => r.vaccinator_name },
     { header: 'المدخل', flex: 1.3, render: (r) => r.entered_by_name || '-' },
     { header: 'رقم التشغيلة', flex: 1.2, render: (r) => r.batch_number },
-    { header: 'تاريخ دخول الطلبية', flex: 1, render: (r) => r.batch_delivery_date || '-' }
+    { header: 'تاريخ دخول الطلبية', flex: 1, render: (r) => r.batch_delivery_date || '-' },
   )
+  if (isMinistry) columns.push({ header: 'الميكنة', flex: 1.1, render: (r) => r.ministry_registered ? 'مسجّل' : 'غير مسجّل' })
 
   return (
     <Document>
@@ -252,6 +255,9 @@ export interface ChildDetailPdfProps {
     hospital_name?: string
     created_at?: string | null
     verified_at?: string | null
+    isMinistry?: boolean
+    ministry_registered?: boolean
+    ministry_registered_at?: string | null
   }
 }
 
@@ -317,6 +323,14 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
           <Text style={styles.sectionTitle}>تتبّع</Text>
           <DetailRow label="تاريخ الإدخال" value={formatCairoDateTime(record.created_at)} />
           <DetailRow label="تاريخ التوثيق" value={record.verified_at ? formatCairoDateTime(record.verified_at) : '-'} />
+          {record.isMinistry && (
+            <DetailRow
+              label="التسجيل على الميكنة"
+              value={record.ministry_registered
+                ? `مسجّل — ${record.ministry_registered_at ? formatCairoDateTime(record.ministry_registered_at) : ''}`
+                : 'غير مسجّل'}
+            />
+          )}
         </View>
       </Page>
     </Document>

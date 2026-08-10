@@ -34,6 +34,8 @@ type ReportRow = {
   batch_number: string | null
   batch_delivery_date: string | null
   batch_expiry_date: string | null
+  ministry_registered: boolean
+  ministry_registered_at: string | null
   request_status: 'pending' | 'approved' | 'rejected' | null
 }
 
@@ -142,11 +144,17 @@ export async function GET(request: Request) {
     ? allRecords.filter(r => statusFilter === 'verified' ? r.is_verified : !r.is_verified)
     : allRecords
 
+  // فلترة حالة التسجيل على الميكنة (للوزارة فقط في الواجهة): مسجّل / غير مسجّل
+  const ministryStatus = searchParams.get('ministry_status')
+  const ministryFiltered = ministryStatus === 'registered' || ministryStatus === 'unregistered'
+    ? filtered.filter(r => ministryStatus === 'registered' ? r.ministry_registered : !r.ministry_registered)
+    : filtered
+
   // الفرز: مفتاح + اتجاه، مع قيمة افتراضية بالاسم تصاعديًا
   const sortBy = searchParams.get('sort_by') ?? 'child_name'
   const sortDir = searchParams.get('sort_dir') === 'desc' ? 'desc' : 'asc'
   const dirMul = sortDir === 'desc' ? -1 : 1
-  const sorted = [...filtered].sort((a, b) => {
+  const sorted = [...ministryFiltered].sort((a, b) => {
     let av: string | number, bv: string | number
     switch (sortBy) {
       case 'birth_date': av = a.birth_date; bv = b.birth_date; break
@@ -228,6 +236,8 @@ export async function GET(request: Request) {
     is_verified: r.is_verified,
     verified_at: r.verified_at,
     created_at: r.created_at,
+    ministry_registered: r.ministry_registered,
+    ministry_registered_at: r.ministry_registered_at,
     request_status: r.request_status,
     vaccinators: r.vaccinator_name ? { full_name: r.vaccinator_name } : null,
     entered_by_name: r.entered_by_name,
@@ -263,6 +273,8 @@ export async function GET(request: Request) {
         father_phone: searchParams.get('father_phone'),
         mother_phone: searchParams.get('mother_phone'),
         batch_number: searchParams.get('batch_number'),
+        status: statusFilter,
+        ministry_status: ministryStatus,
       },
     },
   } as never))

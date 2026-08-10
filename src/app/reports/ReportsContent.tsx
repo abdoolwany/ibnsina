@@ -39,6 +39,8 @@ interface ChildRecord {
   is_verified: boolean
   verified_at: string | null
   created_at: string
+  ministry_registered: boolean
+  ministry_registered_at: string | null
   request_status: 'pending' | 'approved' | 'rejected' | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
@@ -147,6 +149,8 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
   // مفتاح "بحث متقدم" + فلترة الحالة (مغلق افتراضيًا ويُفتح عند الحاجة)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [statusFilter, setStatusFilter] = useState<'all' | 'verified' | 'unverified'>('all')
+  // فلترة التسجيل على الميكنة — تظهر للوزارة فقط (moh_level1 / moh_admin)
+  const [ministryStatusFilter, setMinistryStatusFilter] = useState<'all' | 'registered' | 'unregistered'>('all')
 
   // كامل النتيجة للطباعة/التصدير (يُحمَّل عند الطلب فقط — بند 5)
   const [printRows, setPrintRows] = useState<ChildRecord[] | null>(null)
@@ -163,8 +167,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
   }, [])
 
   // بناء معاملات الطلب من حقول النموذج الحالية + خيارات الترحيل/الفرز
-  function buildParams(overrides: { page?: number; pageSize?: number | 'all'; sortBy?: SortKey; sortDir?: 'asc' | 'desc'; status?: typeof statusFilter; full?: boolean }) {
-    const p = new URLSearchParams()
+  function buildParams(overrides: { page?: number; pageSize?: number | 'all'; sortBy?: SortKey; sortDir?: 'asc' | 'desc'; status?: typeof statusFilter; ministryStatus?: typeof ministryStatusFilter; full?: boolean }) {    const p = new URLSearchParams()
     if (dateFrom) p.set('date_from', dateFrom)
     if (dateTo) p.set('date_to', dateTo)
     if (hospitalId) p.set('hospital_id', hospitalId)
@@ -186,6 +189,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
     if (vaccinatorId) p.set('vaccinator_id', vaccinatorId)
     if (enteredBy) p.set('entered_by', enteredBy)
     p.set('status', overrides.status ?? statusFilter)
+    p.set('ministry_status', overrides.ministryStatus ?? ministryStatusFilter)
     p.set('sort_by', overrides.sortBy ?? sortBy)
     p.set('sort_dir', overrides.sortDir ?? sortDir)
     const ps = overrides.pageSize ?? pageSize
@@ -289,6 +293,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
     setVaccinatorId("")
     setEnteredBy("")
     setStatusFilter('all')
+    setMinistryStatusFilter('all')
     setPage(1)
     setRecords([])
     setStats(null)
@@ -338,6 +343,8 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
       entered_by_name: r.entered_by_name ?? '',
       batch_number: r.vaccine_batches?.batch_number ?? '',
       batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
+      ministry_registered: r.ministry_registered,
+      ministry_status: r.ministry_registered ? 'مسجّل' : 'غير مسجّل',
     }))
   }
 
@@ -354,6 +361,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
     { header: 'المدخل', key: 'entered_by_name', width: 18 },
     { header: 'رقم التشغيلة', key: 'batch_number', width: 14 },
     { header: 'تاريخ دخول الطلبية', key: 'batch_delivery_date', width: 14 },
+    ...(isMinistry ? [{ header: 'الميكنة', key: 'ministry_status', width: 14 }] : []),
   ]
 
   async function handleExportExcel() {
@@ -483,6 +491,18 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
               <button type="button" className={`pill ${statusFilter === 'unverified' ? 'active' : ''}`} onClick={() => handleStatusChange('unverified')}>معلّق</button>
             </div>
           </div>
+
+          {/* فلترة التسجيل على الميكنة — للوزارة فقط */}
+          {isMinistry && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">الميكنة:</span>
+              <div className="pill-group">
+                <button type="button" className={`pill ${ministryStatusFilter === 'all' ? 'active' : ''}`} onClick={() => { setMinistryStatusFilter('all'); runFetch({ page: 1, ministryStatus: 'all' }) }}>الكل</button>
+                <button type="button" className={`pill ${ministryStatusFilter === 'registered' ? 'active' : ''}`} onClick={() => { setMinistryStatusFilter('registered'); runFetch({ page: 1, ministryStatus: 'registered' }) }}>مسجّل</button>
+                <button type="button" className={`pill ${ministryStatusFilter === 'unregistered' ? 'active' : ''}`} onClick={() => { setMinistryStatusFilter('unregistered'); runFetch({ page: 1, ministryStatus: 'unregistered' }) }}>غير مسجّل</button>
+              </div>
+            </div>
+          )}
 
           <span className="text-xs text-gray-500 mr-auto">
             * حقلا التاريخ إلزاميان، والحد الأقصى شهر واحد (بحد أقصى {MAX_REPORT_RANGE_DAYS} يومًا)
@@ -717,6 +737,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                   <th>رقم التشغيلة</th>
                   <th>تاريخ دخول الطلبية</th>
                   <th>الحالة</th>
+                  {isMinistry && <th>الميكنة</th>}
                 </tr>
               </thead>
               <tbody>
@@ -740,6 +761,13 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                         {r.is_verified ? 'موثّق' : 'غير موثّق'}
                       </span>
                     </td>
+                    {isMinistry && (
+                      <td>
+                        <span className={r.ministry_registered ? 'status-verified' : 'status-unverified'}>
+                          {r.ministry_registered ? 'مسجّل' : 'غير مسجّل'}
+                        </span>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -765,6 +793,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                     <th>رقم التشغيلة</th>
                     <th>تاريخ دخول الطلبية</th>
                     <th>الحالة</th>
+                    {isMinistry && <th>الميكنة</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -783,6 +812,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                       <td>{r.vaccine_batches?.batch_number ?? '-'}</td>
                       <td>{r.vaccine_batches?.delivery_date ?? '-'}</td>
                       <td>{r.is_verified ? 'موثّق' : 'غير موثّق'}</td>
+                      {isMinistry && <td>{r.ministry_registered ? 'مسجّل' : 'غير مسجّل'}</td>}
                     </tr>
                   ))}
                 </tbody>

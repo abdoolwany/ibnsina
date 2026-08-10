@@ -10,6 +10,8 @@ type VaccinatedCountRow = {
   female: number
   egyptian: number
   non_egyptian: number
+  ministry_registered: number
+  ministry_unregistered: number
   nationality_breakdown: Array<{ nationality: string; count: number }>
 }
 
@@ -78,6 +80,7 @@ export async function GET(request: Request) {
     statistics: row ?? {
       total: 0, verified: 0, unverified: 0,
       male: 0, female: 0, egyptian: 0, non_egyptian: 0,
+      ministry_registered: 0, ministry_unregistered: 0,
       nationality_breakdown: [],
     },
   })

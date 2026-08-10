@@ -32,6 +32,8 @@ interface VaccinatedStats {
   female: number
   egyptian: number
   non_egyptian: number
+  ministry_registered: number
+  ministry_unregistered: number
   nationality_breakdown: Array<{ nationality: string; count: number }>
 }
 
@@ -98,6 +100,10 @@ export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
     { label: 'إناث', value: stats.female, color: 'text-pink-600' },
     { label: 'مصري', value: stats.egyptian, color: 'text-indigo-600' },
     { label: 'غير مصري', value: stats.non_egyptian, color: 'text-purple-600' },
+    ...(isMinistry ? [
+      { label: 'مسجّل على الميكنة', value: stats.ministry_registered, color: 'text-emerald-600' },
+      { label: 'غير مسجّل على الميكنة', value: stats.ministry_unregistered, color: 'text-slate-600' },
+    ] : []),
   ] : []
 
   return (

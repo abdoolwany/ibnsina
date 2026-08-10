@@ -91,3 +91,21 @@ export async function verifyChildRecord(
   if (error) throw error
   return data as ChildVaccinationRecord
 }
+
+// قائمة السجلات الموثّقة في مستشفيات معينة (مع اسم المستشفى) — تُستخدم في لوحة
+// moh_level1 لعرض سجلات "تسجيل الميكنة". العزل يبقى عبر RLS: moh_level1 يقرأ
+// مستشفياته المرتبطة فقط حتى لو مرّر معرفات خارجية في القائمة.
+export async function getVerifiedChildrenByHospitals(hospitalIds: string[]): Promise<
+  Array<ChildVaccinationRecord & { hospitals: { name: string } | null }>
+> {
+  const supabase = await createServerSupabase()
+  if (hospitalIds.length === 0) return []
+  const { data } = await supabase
+    .from('child_vaccination_records')
+    .select('*, hospitals(name)')
+    .in('hospital_id', hospitalIds)
+    .eq('is_deleted', false)
+    .eq('is_verified', true)
+    .order('verified_at', { ascending: false, nullsFirst: false })
+  return (data ?? []) as Array<ChildVaccinationRecord & { hospitals: { name: string } | null }>
+}

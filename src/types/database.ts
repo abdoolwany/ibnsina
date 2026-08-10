@@ -76,6 +76,9 @@ export interface ChildVaccinationRecord {
   is_verified: boolean
   verified_by: string | null
   verified_at: string | null
+  ministry_registered: boolean
+  ministry_registered_by: string | null
+  ministry_registered_at: string | null
   created_at: string
   updated_at: string
   is_deleted: boolean
@@ -113,7 +116,7 @@ export interface AuditLog {
   id: string
   table_name: string
   record_id: string
-  action: 'insert' | 'update' | 'verify' | 'delete_attempt' | 'unverify' | 'request_create' | 'request_resolve'
+  action: 'insert' | 'update' | 'verify' | 'delete_attempt' | 'unverify' | 'request_create' | 'request_resolve' | 'ministry_register' | 'ministry_unregister'
   performed_by: string
   performed_at: string
   old_value: Record<string, unknown> | null

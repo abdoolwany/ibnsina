@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Pencil, Trash2, CheckCircle2, LockOpen } from "lucide-react"
+import { Pencil, Trash2, CheckCircle2, LockOpen, MonitorCheck } from "lucide-react"
 import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { formatCairoDateTime, cairoToday } from "@/lib/time"
 import { createClient } from "@/lib/supabase/client"
@@ -29,6 +29,8 @@ interface ChildRecordViewData {
   is_verified: boolean
   created_at: string
   verified_at: string | null
+  ministry_registered: boolean
+  ministry_registered_at: string | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
   hospitals: { name: string } | null
@@ -41,6 +43,7 @@ interface Props {
   hospitalIds: string[]
   canManage: boolean
   canVerify: boolean
+  canMinistryRegister: boolean
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -61,9 +64,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   )
 }
 
-export default function ChildRecordView({ record, userRole, userId, hospitalIds, canManage, canVerify }: Props) {
+export default function ChildRecordView({ record, userRole, userId, hospitalIds, canManage, canVerify, canMinistryRegister }: Props) {
   const [exporting, setExporting] = useState(false)
-  const [action, setAction] = useState<'' | 'delete' | 'verify' | 'unverify'>('')
+  const [action, setAction] = useState<'' | 'delete' | 'verify' | 'unverify' | 'ministry'>('')
   const [error, setError] = useState("")
   const [requestStatus, setRequestStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
   const router = useRouter()
@@ -71,6 +74,9 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
 
   const fatherName = `${record.father_first_name} ${record.father_grandfather_name}`.trim()
   const motherName = `${record.mother_first_name} ${record.mother_grandfather_name}`.trim()
+
+  // الوزارة فقط ترى حالة تسجيل الميكنة في السجل الفردي (التقارير)
+  const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
 
   // حالة طلب إعادة فتح التوثيق إن وُجد (للموثّق)
   useEffect(() => {
@@ -119,6 +125,9 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
             hospital_name: record.hospitals?.name,
             created_at: record.created_at,
             verified_at: record.verified_at,
+            isMinistry,
+            ministry_registered: record.ministry_registered,
+            ministry_registered_at: record.ministry_registered_at,
           }}
         />,
         `سجل-${record.child_full_name}-${cairoToday()}.pdf`
@@ -176,6 +185,28 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
     setAction('')
   }
 
+  // تسجيل/إلغاء تسجيل الجرعة على ميكنة التطعيمات — صلاحية moh_level1 فقط
+  // (تُطبَّق القيود في قاعدة البيانات عبر Trigger وRLS — القسم 3/7)
+  async function handleMinistryRegistration(register: boolean) {
+    const actionLabel = register ? 'تسجيل الجرعة على الميكنة' : 'التراجع عن تسجيل الميكنة'
+    if (!window.confirm(`${actionLabel} للطفل «${record.child_full_name}»؟`)) return
+    setAction('ministry')
+    setError("")
+    const updates = register
+      ? { ministry_registered: true, ministry_registered_by: userId, ministry_registered_at: new Date().toISOString() }
+      : { ministry_registered: false, ministry_registered_by: null, ministry_registered_at: null }
+    const { error } = await supabase
+      .from('child_vaccination_records')
+      .update(updates as never)
+      .eq('id', record.id)
+    if (error) {
+      setError(error.message)
+    } else {
+      router.refresh()
+    }
+    setAction('')
+  }
+
   const editPath = userRole === 'hospital_verifier'
     ? `/hospital-verifier/${record.id}/edit`
     : `/hospital-entry/${record.id}/edit`
@@ -214,6 +245,18 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
             <button onClick={handleRequestUnverify} disabled={action === 'unverify'}
               className="btn btn-warning">
               <LockOpen size={16} /> {action === 'unverify' ? 'جاري الإرسال...' : 'طلب إعادة فتح التوثيق'}
+            </button>
+          )}
+          {canMinistryRegister && !record.ministry_registered && (
+            <button onClick={() => handleMinistryRegistration(true)} disabled={action === 'ministry'}
+              className="btn btn-success">
+              <MonitorCheck size={16} /> {action === 'ministry' ? 'جاري التسجيل...' : 'تم التسجيل على الميكنة'}
+            </button>
+          )}
+          {canMinistryRegister && record.ministry_registered && (
+            <button onClick={() => handleMinistryRegistration(false)} disabled={action === 'ministry'}
+              className="btn btn-warning">
+              <MonitorCheck size={16} /> {action === 'ministry' ? 'جاري الإلغاء...' : 'التراجع عن تسجيل الميكنة'}
             </button>
           )}
           <button onClick={handleDownload} disabled={exporting} className="btn btn-danger">
@@ -260,6 +303,14 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
         <Row label="المستشفى" value={record.hospitals?.name ?? ''} />
         <Row label="تاريخ الإدخال" value={formatCairoDateTime(record.created_at)} />
         <Row label="تاريخ التوثيق" value={record.verified_at ? formatCairoDateTime(record.verified_at) : '-'} />
+        {isMinistry && (
+          <Row
+            label="التسجيل على الميكنة"
+            value={record.ministry_registered
+              ? `مسجّل — ${record.ministry_registered_at ? formatCairoDateTime(record.ministry_registered_at) : ''}`
+              : 'غير مسجّل'}
+          />
+        )}
       </div>
     </div>
   )

@@ -30,6 +30,8 @@ interface ChildRecordData {
   is_verified: boolean
   created_at: string
   verified_at: string | null
+  ministry_registered: boolean
+  ministry_registered_at: string | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
   hospitals: { name: string } | null
@@ -55,9 +57,16 @@ export default async function ChildRecordPage({ params }: { params: Promise<{ id
     <AppShell user={user} maxWidth="max-w-3xl">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-2xl font-bold">سجل طفل</h2>
-        <span className={`badge ${data?.is_verified ? 'badge-success' : 'badge-warning'}`}>
-          {data?.is_verified ? 'موثّق' : 'غير موثّق'}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`badge ${data?.is_verified ? 'badge-success' : 'badge-warning'}`}>
+            {data?.is_verified ? 'موثّق' : 'غير موثّق'}
+          </span>
+          {(user.role === 'moh_admin' || user.role === 'moh_level1') && data && (
+            <span className={`badge ${data.ministry_registered ? 'badge-success' : 'badge-warning'}`}>
+              {data.ministry_registered ? 'مسجّل على الميكنة' : 'غير مسجّل على الميكنة'}
+            </span>
+          )}
+        </div>
       </div>
       {!data ? (
         <div className="card p-6 text-center text-gray-600">
@@ -71,6 +80,7 @@ export default async function ChildRecordPage({ params }: { params: Promise<{ id
           hospitalIds={user.hospitalIds}
           canManage={canManage && data.hospital_id === user.hospitalIds[0] && !data.is_verified}
           canVerify={user.role === 'hospital_verifier' && data.hospital_id === user.hospitalIds[0]}
+          canMinistryRegister={user.role === 'moh_level1' && data.is_verified && user.hospitalIds.includes(data.hospital_id)}
         />
       )}
     </AppShell>

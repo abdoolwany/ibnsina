@@ -3,8 +3,10 @@ import DashboardShell from '@/components/DashboardShell'
 import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getBatchBalance } from '@/lib/db/batches'
+import { getVerifiedChildrenByHospitals } from '@/lib/db/children'
 import { getPendingUnverifyRequestsByHospitals } from '@/lib/db/unverifyRequests'
 import BatchListTable from './BatchListTable'
+import MinistryRegistrationList from './MinistryRegistrationList'
 import UnverifyRequestsList from '@/components/UnverifyRequestsList'
 
 export default async function MohLevel1Page() {
@@ -14,7 +16,7 @@ export default async function MohLevel1Page() {
   const hospitals = await getAllHospitals()
   const linkedHospitals = hospitals.filter(h => user.hospitalIds.includes(h.id))
 
-  const [hospitalData, pendingRequests] = await Promise.all([
+  const [hospitalData, pendingRequests, verifiedChildren] = await Promise.all([
     Promise.all(
       linkedHospitals.map(async h => {
         const balances = await getBatchBalance(h.id)
@@ -25,6 +27,7 @@ export default async function MohLevel1Page() {
       })
     ),
     getPendingUnverifyRequestsByHospitals(user.hospitalIds),
+    getVerifiedChildrenByHospitals(user.hospitalIds),
   ])
 
   return (
@@ -57,6 +60,11 @@ export default async function MohLevel1Page() {
             <BatchListTable balances={h.balances} />
           </div>
         ))}
+
+        <MinistryRegistrationList
+          records={verifiedChildren}
+          hospitals={linkedHospitals.map(h => ({ id: h.id, name: h.name }))}
+        />
 
         <UnverifyRequestsList requests={pendingRequests} />
       </div>
