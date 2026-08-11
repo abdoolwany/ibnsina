@@ -63,13 +63,23 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
             </thead>
             <tbody>
               {filtered.map(r => (
-                <tr key={r.id}>
+                <tr
+                  key={r.id}
+                  className="row-clickable"
+                  onClick={() => window.open(`/reports/child/${r.id}`, '_blank', 'noopener,noreferrer')}
+                >
                   <td>{r.hospitals?.name ?? '-'}</td>
                   <td className="font-medium">{r.child_full_name}</td>
                   <td>{r.vaccination_date}</td>
                   <td>{r.verified_at ? new Date(r.verified_at).toLocaleDateString('ar-EG') : '-'}</td>
                   <td>
-                    <Link href={`/reports/child/${r.id}`} target="_blank" rel="noopener noreferrer" className="btn-soft px-3 py-1">
+                    <Link
+                      href={`/reports/child/${r.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="btn-soft px-3 py-1"
+                    >
                       فتح السجل
                     </Link>
                   </td>

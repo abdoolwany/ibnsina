@@ -52,45 +52,53 @@ export default function UnverifyRequestsList({ requests, showHospital = true }: 
       {requests.length === 0 ? (
         <p className="p-4 text-sm text-gray-500">لا توجد طلبات إعادة فتح معلّقة حاليًا.</p>
       ) : (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b text-right">
-              <th className="py-3 px-4 font-semibold">الطفل</th>
-              <th className="py-3 px-4 font-semibold">تاريخ التطعيم</th>
-              {showHospital && <th className="py-3 px-4 font-semibold">المستشفى</th>}
-              <th className="py-3 px-4 font-semibold">الطالب</th>
-              <th className="py-3 px-4 font-semibold"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map(r => (
-              <tr key={r.id} className="border-b hover:bg-gray-50">
-                <td className="py-3 px-4">{r.child_full_name}</td>
-                <td className="py-3 px-4">{r.vaccination_date}</td>
-                {showHospital && <td className="py-3 px-4">{r.hospital_name ?? '-'}</td>}
-                <td className="py-3 px-4">{r.requester_name ?? '-'}</td>
-                <td className="py-3 px-4">
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleResolve(r, 'approve')}
-                      disabled={busyId === r.id}
-                      className="text-sm px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
-                    >
-                      {busyId === r.id ? "..." : "اعتماد"}
-                    </button>
-                    <button
-                      onClick={() => handleResolve(r, 'reject')}
-                      disabled={busyId === r.id}
-                      className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
-                    >
-                      رفض
-                    </button>
-                  </div>
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-right">
+                <th className="py-3 px-4 font-semibold">الطفل</th>
+                <th className="py-3 px-4 font-semibold">تاريخ التطعيم</th>
+                {showHospital && <th className="py-3 px-4 font-semibold">المستشفى</th>}
+                <th className="py-3 px-4 font-semibold">الطالب</th>
+                <th className="py-3 px-4 font-semibold"></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {requests.map(r => (
+                // النقر في أي مكان في الصف يفتح سجل الطفل في تبويب جديد (كما في التقارير)،
+                // وزرّا الاعتماد/الرفض يتوقفان عن الفتح (stopPropagation)
+                <tr
+                  key={r.id}
+                  className="row-clickable border-b hover:bg-gray-50"
+                  onClick={() => window.open(`/reports/child/${r.record_id}`, '_blank', 'noopener,noreferrer')}
+                >
+                  <td className="py-3 px-4">{r.child_full_name}</td>
+                  <td className="py-3 px-4">{r.vaccination_date}</td>
+                  {showHospital && <td className="py-3 px-4">{r.hospital_name ?? '-'}</td>}
+                  <td className="py-3 px-4">{r.requester_name ?? '-'}</td>
+                  <td className="py-3 px-4">
+                    <div className="flex gap-2" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleResolve(r, 'approve')}
+                        disabled={busyId === r.id}
+                        className="text-sm px-3 py-1 rounded bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50"
+                      >
+                        {busyId === r.id ? "..." : "اعتماد"}
+                      </button>
+                      <button
+                        onClick={() => handleResolve(r, 'reject')}
+                        disabled={busyId === r.id}
+                        className="text-sm px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50"
+                      >
+                        رفض
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

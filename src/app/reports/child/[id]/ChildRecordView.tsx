@@ -3,10 +3,11 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Pencil, Trash2, CheckCircle2, LockOpen, MonitorCheck } from "lucide-react"
+import { Pencil, Trash2, CheckCircle2, LockOpen, MonitorCheck, XCircle } from "lucide-react"
 import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { formatCairoDateTime, cairoToday } from "@/lib/time"
 import { createClient } from "@/lib/supabase/client"
+import { resolveUnverifyRequest } from "@/lib/client/unverifyRequests"
 
 // بيانات السجل مع الروابط الداخلية القادمة من الخادم
 interface ChildRecordViewData {
@@ -66,9 +67,10 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function ChildRecordView({ record, userRole, userId, hospitalIds, canManage, canVerify, canMinistryRegister }: Props) {
   const [exporting, setExporting] = useState(false)
-  const [action, setAction] = useState<'' | 'delete' | 'verify' | 'unverify' | 'ministry'>('')
+  const [action, setAction] = useState<'' | 'delete' | 'verify' | 'unverify' | 'ministry' | 'resolve'>('')
   const [error, setError] = useState("")
-  const [requestStatus, setRequestStatus] = useState<'pending' | 'approved' | 'rejected' | null>(null)
+  // أحدث طلب إعادة فتح توثيق لهذا السجل (للموثّق وللوزارة) — نحتاج معرّفه لحسمه من هنا
+  const [request, setRequest] = useState<{ id: string; status: 'pending' | 'approved' | 'rejected' } | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -77,24 +79,26 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
 
   // الوزارة فقط ترى حالة تسجيل الميكنة في السجل الفردي (التقارير)
   const isMinistry = userRole === 'moh_admin' || userRole === 'moh_level1'
+  // حسم طلبات إعادة فتح التوثيق مخصص للمستوى الأول فقط — الإدارة العليا قراءة فقط (بند 2)
+  const canResolveUnverify = userRole === 'moh_level1'
 
-  // حالة طلب إعادة فتح التوثيق إن وُجد (للموثّق)
+  // حالة طلب إعادة فتح التوثيق إن وُجد (للموثّق وللمستوى الأول)
   useEffect(() => {
-    if (!canVerify || !record.is_verified) return
+    if (!(canVerify || canResolveUnverify) || !record.is_verified) return
     let cancelled = false
     supabase
       .from('unverify_requests')
-      .select('status')
+      .select('id, status')
       .eq('record_id', record.id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
       .then(({ data }) => {
-        const st = (data as { status: string } | null)?.status
-        if (!cancelled && st) setRequestStatus(st as typeof requestStatus)
+        const d = data as { id: string; status: string } | null
+        if (!cancelled && d) setRequest({ id: d.id, status: d.status as 'pending' | 'approved' | 'rejected' })
       })
     return () => { cancelled = true }
-  }, [record.id, record.is_verified, canVerify, supabase])
+  }, [record.id, record.is_verified, canVerify, canResolveUnverify, supabase])
 
   async function handleDownload() {
     setExporting(true)
@@ -180,7 +184,25 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
     if (error) {
       setError(error.message)
     } else {
-      setRequestStatus('pending')
+      setRequest({ id: '', status: 'pending' })
+    }
+    setAction('')
+  }
+
+  // اعتماد/رفض طلب إعادة فتح التوثيق من حساب الوزارة (moh_level1/moh_admin) مباشرة
+  // من صفحة السجل — نفس RPC الآمن الذي تستخدمه قائمة الطلبات في لوحة الوزارة
+  async function handleResolveUnverify(decision: 'approve' | 'reject') {
+    if (!request) return
+    const label = decision === 'approve' ? 'اعتماد إعادة فتح التوثيق' : 'رفض طلب إعادة الفتح'
+    if (!window.confirm(`${label} لسجل «${record.child_full_name}»؟`)) return
+    setAction('resolve')
+    setError("")
+    const { error } = await resolveUnverifyRequest(request.id, decision)
+    if (error) {
+      setError(error)
+    } else {
+      setRequest(prev => (prev ? { ...prev, status: decision === 'approve' ? 'approved' : 'rejected' } : prev))
+      router.refresh()
     }
     setAction('')
   }
@@ -238,14 +260,31 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
               <CheckCircle2 size={16} /> {action === 'verify' ? 'جاري التوثيق...' : 'توثيق'}
             </button>
           )}
-          {canVerify && record.is_verified && requestStatus === 'pending' && (
+          {canVerify && record.is_verified && request?.status === 'pending' && (
             <span className="badge badge-warning">بانتظار رد الوزارة على إعادة الفتح</span>
           )}
-          {canVerify && record.is_verified && requestStatus !== 'pending' && (
+          {canVerify && record.is_verified && request?.status !== 'pending' && (
             <button onClick={handleRequestUnverify} disabled={action === 'unverify'}
               className="btn btn-warning">
               <LockOpen size={16} /> {action === 'unverify' ? 'جاري الإرسال...' : 'طلب إعادة فتح التوثيق'}
             </button>
+          )}
+          {canResolveUnverify && record.is_verified && request?.status === 'pending' && (
+            <>
+              <button onClick={() => handleResolveUnverify('approve')} disabled={action === 'resolve'}
+                className="btn btn-success">
+                <CheckCircle2 size={16} /> {action === 'resolve' ? 'جاري الاعتماد...' : 'اعتماد إعادة فتح التوثيق'}
+              </button>
+              <button onClick={() => handleResolveUnverify('reject')} disabled={action === 'resolve'}
+                className="btn btn-danger">
+                <XCircle size={16} /> رفض
+              </button>
+            </>
+          )}
+          {canResolveUnverify && record.is_verified && request && request.status !== 'pending' && (
+            <span className="badge badge-gray">
+              إعادة الفتح: {request.status === 'approved' ? 'تم الاعتماد' : 'تم الرفض'}
+            </span>
           )}
           {canMinistryRegister && !record.ministry_registered && (
             <button onClick={() => handleMinistryRegistration(true)} disabled={action === 'ministry'}

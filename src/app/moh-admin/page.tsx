@@ -3,8 +3,6 @@ import { getCurrentUser } from '@/lib/auth'
 import { getAllHospitals } from '@/lib/db/hospitals'
 import { getChildrenByHospital } from '@/lib/db/children'
 import { getBatchesByHospital, getBatchBalance } from '@/lib/db/batches'
-import { getAllPendingUnverifyRequests } from '@/lib/db/unverifyRequests'
-import UnverifyRequestsList from '@/components/UnverifyRequestsList'
 
 export default async function MohAdminPage() {
   const user = await getCurrentUser()
@@ -12,20 +10,17 @@ export default async function MohAdminPage() {
 
   const hospitals = await getAllHospitals()
 
-  const [hospitalData, pendingRequests] = await Promise.all([
-    Promise.all(
-      hospitals.map(async h => {
-        const batches = await getBatchesByHospital(h.id)
-        const children = await getChildrenByHospital(h.id)
-        const balances = await getBatchBalance(h.id)
-        const totalDelivered = batches.reduce((s, b) => s + b.quantity, 0)
-        const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
-        const verified = children.filter(c => c.is_verified).length
-        return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
-      })
-    ),
-    getAllPendingUnverifyRequests(),
-  ])
+  const hospitalData = await Promise.all(
+    hospitals.map(async h => {
+      const batches = await getBatchesByHospital(h.id)
+      const children = await getChildrenByHospital(h.id)
+      const balances = await getBatchBalance(h.id)
+      const totalDelivered = batches.reduce((s, b) => s + b.quantity, 0)
+      const remaining = balances.reduce((s, b) => s + b.remaining_balance, 0)
+      const verified = children.filter(c => c.is_verified).length
+      return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
+    })
+  )
   const totals = hospitalData.reduce(
     (s, h) => ({
       children: s.children + h.childrenCount,
@@ -106,7 +101,6 @@ export default async function MohAdminPage() {
           </table>
         </div>
 
-      <UnverifyRequestsList requests={pendingRequests} />
       </div>
     </DashboardShell>
   )
