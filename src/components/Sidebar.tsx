@@ -74,7 +74,7 @@ function isActive(pathname: string, item: NavItem): boolean {
   return pathname.startsWith(item.href)
 }
 
-export default function Sidebar({ user }: { user: AuthUser }) {
+export default function Sidebar({ user, collapsed }: { user: AuthUser; collapsed: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -85,19 +85,21 @@ export default function Sidebar({ user }: { user: AuthUser }) {
     router.refresh()
   }
 
+  // عند الطي تُخفي القائمة كاملةً لأعلى (tanslateY) عبر CSS — لا سكرول داخلي أبدًا:
+  // القائمة عنصر واحد متصل من «الرئيسية» حتى «تسجيل الخروج» (طلب المستخدم)
   return (
-    <aside className="sidebar sidebar-gradient no-print" dir="rtl">
-      <div className="px-5 py-5 border-b border-white/15 flex items-center gap-3">
-        <span className="grid place-items-center w-10 h-10 rounded-xl bg-white/15 text-white">
-          <ShieldCheck size={22} />
+    <aside className={`sidebar sidebar-gradient no-print ${collapsed ? 'sidebar-hidden' : ''}`} dir="rtl">
+      <div className="px-4 py-3 border-b border-white/15 flex items-center gap-3 shrink-0">
+        <span className="grid place-items-center w-9 h-9 rounded-xl bg-white/15 text-white shrink-0">
+          <ShieldCheck size={20} />
         </span>
-        <div>
-          <p className="font-bold text-white leading-tight">منظومة التطعيم</p>
+        <div className="min-w-0">
+          <p className="font-bold text-white leading-tight truncate">منظومة التطعيم</p>
           <p className="text-[11px] text-white/80">الالتهاب الكبدي B</p>
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-3">
+      <nav className="flex-1 py-2 overflow-visible">
         {items.map(item => (
           <Link
             key={item.href}
@@ -105,14 +107,14 @@ export default function Sidebar({ user }: { user: AuthUser }) {
             className={`sidebar-item ${isActive(pathname, item) ? 'active' : ''}`}
           >
             <item.icon size={18} />
-            <span>{item.label}</span>
+            <span className="whitespace-nowrap">{item.label}</span>
           </Link>
         ))}
       </nav>
 
-      <div className="px-3 pb-4">
-        <div className="px-2 py-2 border-t border-white/15 flex items-center gap-3 mb-1">
-          <span className="grid place-items-center w-9 h-9 rounded-full bg-white/15 text-white text-sm font-bold">
+      <div className="px-3 pb-3 shrink-0">
+        <div className="px-2 py-1.5 border-t border-white/15 flex items-center gap-3 mb-1">
+          <span className="grid place-items-center w-8 h-8 rounded-full bg-white/15 text-white text-sm font-bold shrink-0">
             {(user.fullName ?? user.email ?? '؟').charAt(0)}
           </span>
           <div className="min-w-0">
@@ -122,7 +124,7 @@ export default function Sidebar({ user }: { user: AuthUser }) {
         </div>
         <button onClick={handleLogout} className="sidebar-item sidebar-logout w-full text-right">
           <LogOut size={18} />
-          <span>تسجيل الخروج</span>
+          <span className="whitespace-nowrap">تسجيل الخروج</span>
         </button>
       </div>
     </aside>

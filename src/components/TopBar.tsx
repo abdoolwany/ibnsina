@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Syringe, Clock } from "lucide-react"
+import { Syringe, Clock, Menu, PanelRightOpen } from "lucide-react"
 import type { AuthUser } from "@/lib/auth"
 
 const roleLabels: Record<string, string> = {
@@ -33,14 +33,31 @@ function useLiveClock() {
   return now
 }
 
-export default function TopBar({ user }: { user: AuthUser }) {
+export default function TopBar({
+  user,
+  onToggleSidebar,
+  collapsed,
+}: {
+  user: AuthUser
+  onToggleSidebar: () => void
+  collapsed: boolean
+}) {
   const clock = useLiveClock()
 
   return (
     <header className="topbar topbar-gradient no-print" dir="rtl">
-      <div className="flex items-center justify-between gap-4 px-5 py-3">
+      <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3">
+        {/* زر طي/إظهار القائمة الجانبية (ثلاث خطوط): يخفيها كاملةً ويوسّعها بنقرة أخرى */}
+        <button
+          onClick={onToggleSidebar}
+          title={collapsed ? 'إظهار القائمة' : 'إخفاء القائمة'}
+          className="grid place-items-center w-9 h-9 rounded-lg bg-white/15 text-white hover:bg-white/25 transition-colors shrink-0"
+        >
+          {collapsed ? <PanelRightOpen size={20} /> : <Menu size={20} />}
+        </button>
+
         <div className="flex items-center gap-3 min-w-0">
-          <span className="grid place-items-center w-9 h-9 rounded-lg bg-white/15 text-white">
+          <span className="grid place-items-center w-9 h-9 rounded-lg bg-white/15 text-white shrink-0">
             <Syringe size={20} />
           </span>
           <span className="font-bold text-white hidden sm:inline">منظومة تطعيم الكبدي B</span>
