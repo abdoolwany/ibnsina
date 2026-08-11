@@ -85,10 +85,11 @@ export default function Sidebar({ user, collapsed }: { user: AuthUser; collapsed
     router.refresh()
   }
 
-  // عند الطي تُخفي القائمة كاملةً لأعلى (tanslateY) عبر CSS — لا سكرول داخلي أبدًا:
-  // القائمة عنصر واحد متصل من «الرئيسية» حتى «تسجيل الخروج» (طلب المستخدم)
+  // عند الطي تُخفي القائمة كاملةً (أعلى على الشاشات الكبيرة / يمينًا على الهاتف) عبر CSS.
+  // على الهاتف تُخفى افتراضيًا (class open-mobile يُظهرها فقط عند فتحها) لتفادي أي وميض
+  // عند فتح التطبيق، والقائمة عنصر واحد متصل من «الرئيسية» حتى «تسجيل الخروج» (طلب المستخدم)
   return (
-    <aside className={`sidebar sidebar-gradient no-print ${collapsed ? 'sidebar-hidden' : ''}`} dir="rtl">
+    <aside className={`sidebar sidebar-gradient no-print ${collapsed ? 'sidebar-hidden' : 'open-mobile'}`} dir="rtl">
       <div className="px-4 py-3 border-b border-white/15 flex items-center gap-3 shrink-0">
         <span className="grid place-items-center w-9 h-9 rounded-xl bg-white/15 text-white shrink-0">
           <ShieldCheck size={20} />
