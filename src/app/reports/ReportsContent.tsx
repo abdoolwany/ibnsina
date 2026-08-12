@@ -688,26 +688,28 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
           {isMinistry && (
             <div className="card p-4">
               <h4 className="font-semibold mb-3">التوزيع حسب المستشفى</h4>
-              <table>
-                <thead>
-                  <tr className="text-right">
-                    <th>المستشفى</th>
-                    <th>ذكور</th>
-                    <th>إناث</th>
-                    <th>الإجمالي</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.byHospital.map(h => (
-                    <tr key={h.hospital_id}>
-                      <td>{h.hospital_name}</td>
-                      <td>{h.male}</td>
-                      <td>{h.female}</td>
-                      <td className="font-bold">{h.total}</td>
+              <div className="overflow-x-auto">
+                <table>
+                  <thead>
+                    <tr className="text-right">
+                      <th>المستشفى</th>
+                      <th>ذكور</th>
+                      <th>إناث</th>
+                      <th>الإجمالي</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {stats.byHospital.map(h => (
+                      <tr key={h.hospital_id}>
+                        <td>{h.hospital_name}</td>
+                        <td>{h.male}</td>
+                        <td>{h.female}</td>
+                        <td className="font-bold">{h.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

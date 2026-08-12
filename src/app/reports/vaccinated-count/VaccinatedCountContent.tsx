@@ -164,22 +164,24 @@ export default function VaccinatedCountContent({ hospitals, userRole }: Props) {
           {stats.nationality_breakdown.length > 0 && (
             <div className="card p-4">
               <h4 className="font-semibold mb-3">التوزيع حسب الجنسية</h4>
-              <table>
-                <thead>
-                  <tr className="text-right">
-                    <th>الجنسية</th>
-                    <th>العدد</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.nationality_breakdown.map(n => (
-                    <tr key={n.nationality}>
-                      <td>{n.nationality}</td>
-                      <td className="font-bold">{n.count}</td>
+              <div className="overflow-x-auto">
+                <table>
+                  <thead>
+                    <tr className="text-right">
+                      <th>الجنسية</th>
+                      <th>العدد</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {stats.nationality_breakdown.map(n => (
+                      <tr key={n.nationality}>
+                        <td>{n.nationality}</td>
+                        <td className="font-bold">{n.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

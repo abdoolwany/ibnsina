@@ -132,14 +132,15 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
       </div>
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b text-right">
-              <th className="py-3 px-4 font-semibold">الاسم</th>
-              <th className="py-3 px-4 font-semibold">الحالة</th>
-              <th className="py-3 px-4 font-semibold">إجراءات</th>
-            </tr>
-          </thead>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-right">
+                <th className="py-3 px-4 font-semibold">الاسم</th>
+                <th className="py-3 px-4 font-semibold">الحالة</th>
+                <th className="py-3 px-4 font-semibold">إجراءات</th>
+              </tr>
+            </thead>
           <tbody>
             {visible.length === 0 ? (
               <tr>
@@ -186,8 +187,9 @@ export default function VaccinatorManager({ vaccinators, hospitalId, userId }: P
                 </tr>
               ))
             )}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

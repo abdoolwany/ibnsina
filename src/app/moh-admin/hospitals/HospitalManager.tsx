@@ -62,31 +62,33 @@ export default function HospitalManager({ hospitals: initial }: { hospitals: Hos
       {error && <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>}
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b text-right">
-              <th className="py-3 px-4">اسم المستشفى</th>
-              <th className="py-3 px-4">تاريخ الإضافة</th>
-              <th className="py-3 px-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {hospitals.length === 0 ? (
-              <tr><td colSpan={3} className="py-8 text-center text-gray-500">لا توجد مستشفيات</td></tr>
-            ) : (
-              hospitals.map(h => (
-                <tr key={h.id} className="border-b hover:bg-gray-50">
-                  <td className="py-3 px-4">{h.name}</td>
-                  <td className="py-3 px-4 text-gray-500">{formatCairoDateTime(h.created_at)}</td>
-                  <td className="py-3 px-4">
-                    <button onClick={() => handleDelete(h.id)}
-                      className="text-red-600 hover:text-red-800 text-sm">حذف</button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-right">
+                <th className="py-3 px-4">اسم المستشفى</th>
+                <th className="py-3 px-4">تاريخ الإضافة</th>
+                <th className="py-3 px-4"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {hospitals.length === 0 ? (
+                <tr><td colSpan={3} className="py-8 text-center text-gray-500">لا توجد مستشفيات</td></tr>
+              ) : (
+                hospitals.map(h => (
+                  <tr key={h.id} className="border-b hover:bg-gray-50">
+                    <td className="py-3 px-4">{h.name}</td>
+                    <td className="py-3 px-4 text-gray-500">{formatCairoDateTime(h.created_at)}</td>
+                    <td className="py-3 px-4">
+                      <button onClick={() => handleDelete(h.id)}
+                        className="text-red-600 hover:text-red-800 text-sm">حذف</button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -22,28 +22,30 @@ export default function BatchBalanceTable({ balances }: { balances: BatchBalance
       {visible.length === 0 ? (
         <p className="text-gray-500 text-center py-8">لا توجد دفعات مستلمة بعد</p>
       ) : (
-        <table>
-          <thead>
-            <tr className="text-right">
-              <th>رقم التشغيلة</th>
-              <th>تاريخ الصلاحية</th>
-              <th>المُسلَّم</th>
-              <th>المستخدم</th>
-              <th>المتبقي</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(b => (
-              <tr key={b.batch_id}>
-                <td className="font-medium">{b.batch_number}</td>
-                <td className={b.expiry_date < today ? 'cell-critical' : ''}>{b.expiry_date}</td>
-                <td>{b.total_quantity}</td>
-                <td>{b.used_quantity}</td>
-                <td className={b.remaining_balance <= 0 ? 'cell-critical' : 'cell-normal'}>{b.remaining_balance}</td>
+        <div className="overflow-x-auto">
+          <table>
+            <thead>
+              <tr className="text-right">
+                <th>رقم التشغيلة</th>
+                <th>تاريخ الصلاحية</th>
+                <th>المُسلَّم</th>
+                <th>المستخدم</th>
+                <th>المتبقي</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visible.map(b => (
+                <tr key={b.batch_id}>
+                  <td className="font-medium">{b.batch_number}</td>
+                  <td className={b.expiry_date < today ? 'cell-critical' : ''}>{b.expiry_date}</td>
+                  <td>{b.total_quantity}</td>
+                  <td>{b.used_quantity}</td>
+                  <td className={b.remaining_balance <= 0 ? 'cell-critical' : 'cell-normal'}>{b.remaining_balance}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

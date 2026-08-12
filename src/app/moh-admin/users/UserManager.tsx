@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { useRouter } from "next/navigation"
 import type { Hospital, UserRole } from "@/types/database"
 
 interface UserProfile {
@@ -26,7 +25,6 @@ const ALL_ROLES: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level
 const MOH_ADMIN_MANAGED_ROLES: UserRole[] = ['hospital_entry', 'hospital_verifier', 'moh_level1']
 
 export default function UserManager({ hospitals, currentUserId, managerRole }: { hospitals: Hospital[]; currentUserId: string; managerRole: 'moh_admin' | 'system_operator' }) {
-  const router = useRouter()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -186,18 +184,19 @@ export default function UserManager({ hospitals, currentUserId, managerRole }: {
       {error && <div className="bg-red-50 p-3 text-sm text-red-700 rounded">{error}</div>}
 
       <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b text-right">
-              <th className="py-3 px-4">اسم المستخدم</th>
-              <th className="py-3 px-4">الاسم</th>
-              <th className="py-3 px-4">الدور</th>
-              <th className="py-3 px-4">المستشفيات</th>
-              <th className="py-3 px-4">إجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleUsers.map(u => (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b text-right">
+                <th className="py-3 px-4">اسم المستخدم</th>
+                <th className="py-3 px-4">الاسم</th>
+                <th className="py-3 px-4">الدور</th>
+                <th className="py-3 px-4">المستشفيات</th>
+                <th className="py-3 px-4">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleUsers.map(u => (
               <tr key={u.id} className="border-b hover:bg-gray-50">
                 <td className="py-3 px-4 font-mono text-xs">
                   {editingId === u.id ? (
@@ -259,8 +258,9 @@ export default function UserManager({ hospitals, currentUserId, managerRole }: {
                 </td>
               </tr>
             ))}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
