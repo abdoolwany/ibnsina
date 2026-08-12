@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import type { ChildVaccinationRecord } from "@/types/database"
+import ChildSerial from "@/components/ChildSerial"
 
 type VerifiedChild = ChildVaccinationRecord & { hospitals: { name: string } | null }
 
@@ -55,6 +56,7 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
             <thead>
               <tr className="text-right">
                 <th>المستشفى</th>
+                <th>الرقم المسلسل</th>
                 <th>اسم الطفل</th>
                 <th>تاريخ التطعيم</th>
                 <th>تاريخ التوثيق</th>
@@ -69,6 +71,14 @@ export default function MinistryRegistrationList({ records, hospitals }: Props) 
                   onClick={() => window.open(`/reports/child/${r.id}`, '_blank', 'noopener,noreferrer')}
                 >
                   <td>{r.hospitals?.name ?? '-'}</td>
+                  <td>
+                    <ChildSerial
+                      serialNumber={r.serial_number}
+                      serialMonth={r.serial_month}
+                      serialYear={r.serial_year}
+                      size="sm"
+                    />
+                  </td>
                   <td className="font-medium">{r.child_full_name}</td>
                   <td>{r.vaccination_date}</td>
                   <td>{r.verified_at ? new Date(r.verified_at).toLocaleDateString('ar-EG') : '-'}</td>

@@ -12,6 +12,7 @@ import {
 import { cairoToday } from "@/lib/time"
 import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from "@/lib/time"
 import { NATIONALITIES, nationalityToFilterParam } from "@/lib/nationalities"
+import ChildSerial from "@/components/ChildSerial"
 
 interface ChildRecord {
   id: string
@@ -40,6 +41,9 @@ interface ChildRecord {
   created_at: string
   ministry_registered: boolean
   ministry_registered_at: string | null
+  serial_number: number | null
+  serial_month: number | null
+  serial_year: number | null
   request_status: 'pending' | 'approved' | 'rejected' | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
@@ -340,29 +344,37 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
   }
 
   function toExportRows(source: ChildRecord[]): ChildReportRow[] {
-    return source.map(r => ({
-      hospital_name: r.hospitals?.name,
-      child_full_name: r.child_full_name,
-      birth_date: r.birth_date,
-      child_gender: r.child_gender,
-      child_nationality: r.child_nationality,
-      father_name: formatFullName(r.father_first_name, r.father_grandfather_name),
-      father_national_id: r.father_national_id,
-      mother_name: formatFullName(r.mother_first_name, r.mother_grandfather_name),
-      mother_national_id: r.mother_national_id,
-      vaccination_date: r.vaccination_date,
-      vaccinator_name: r.vaccinators?.full_name ?? '',
-      entered_by_name: r.entered_by_name ?? '',
-      batch_number: r.vaccine_batches?.batch_number ?? '',
-      batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
-      is_verified: r.is_verified,
-      ministry_registered: r.ministry_registered,
-      ministry_status: r.ministry_registered ? 'مسجّل' : 'غير مسجّل',
-    }))
+    return source.map(r => {
+      const hasSerial = r.serial_number && r.serial_month && r.serial_year
+      return {
+        hospital_name: r.hospitals?.name,
+        child_full_name: r.child_full_name,
+        serial_number: r.serial_number,
+        serial_month: r.serial_month,
+        serial_year: r.serial_year,
+        serial_display: hasSerial ? `${r.serial_number} / ${r.serial_month}-${r.serial_year}` : '',
+        birth_date: r.birth_date,
+        child_gender: r.child_gender,
+        child_nationality: r.child_nationality,
+        father_name: formatFullName(r.father_first_name, r.father_grandfather_name),
+        father_national_id: r.father_national_id,
+        mother_name: formatFullName(r.mother_first_name, r.mother_grandfather_name),
+        mother_national_id: r.mother_national_id,
+        vaccination_date: r.vaccination_date,
+        vaccinator_name: r.vaccinators?.full_name ?? '',
+        entered_by_name: r.entered_by_name ?? '',
+        batch_number: r.vaccine_batches?.batch_number ?? '',
+        batch_delivery_date: r.vaccine_batches?.delivery_date ?? '',
+        is_verified: r.is_verified,
+        ministry_registered: r.ministry_registered,
+        ministry_status: r.ministry_registered ? 'مسجّل' : 'غير مسجّل',
+      }
+    })
   }
 
   const excelColumns = [
     ...(isMinistry ? [{ header: 'المستشفى', key: 'hospital_name', width: 20 }] : []),
+    { header: 'الرقم المسلسل', key: 'serial_display', width: 14 },
     { header: 'اسم الطفل', key: 'child_full_name', width: 20 },
     { header: 'تاريخ الميلاد', key: 'birth_date', width: 14 },
     { header: 'اسم الأب', key: 'father_name', width: 20 },
@@ -748,6 +760,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
               <thead>
                 <tr className="text-right">
                   {isMinistry && <SortableTh label="المستشفى" sortKey="hospital" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />}
+                  <th>الرقم المسلسل</th>
                   <SortableTh label="اسم الطفل" sortKey="child_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="تاريخ الميلاد" sortKey="birth_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="اسم الأب" sortKey="father_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
@@ -767,6 +780,14 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                 {records.map(r => (
                   <tr key={r.id} className="row-clickable" onClick={() => window.open(`/reports/child/${r.id}`, '_blank', 'noopener,noreferrer')}>
                     {isMinistry && <td>{r.hospitals?.name ?? '-'}</td>}
+                    <td>
+                      <ChildSerial
+                        serialNumber={r.serial_number}
+                        serialMonth={r.serial_month}
+                        serialYear={r.serial_year}
+                        size="sm"
+                      />
+                    </td>
                     <td className="font-medium">{r.child_full_name}</td>
                     <td>{r.birth_date}</td>
                     <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
@@ -804,6 +825,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                 <thead>
                   <tr className="text-right">
                     {isMinistry && <th>المستشفى</th>}
+                    <th>الرقم المسلسل</th>
                     <th>اسم الطفل</th>
                     <th>تاريخ الميلاد</th>
                     <th>اسم الأب</th>
@@ -823,6 +845,14 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                   {printRows.map(r => (
                     <tr key={r.id}>
                       {isMinistry && <td>{r.hospitals?.name ?? '-'}</td>}
+                      <td>
+                        <ChildSerial
+                          serialNumber={r.serial_number}
+                          serialMonth={r.serial_month}
+                          serialYear={r.serial_year}
+                          size="sm"
+                        />
+                      </td>
                       <td>{r.child_full_name}</td>
                       <td>{r.birth_date}</td>
                       <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>

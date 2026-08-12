@@ -46,7 +46,7 @@ export async function getChildById(id: string): Promise<ChildVaccinationRecord |
 }
 
 export async function createChildRecord(
-  record: Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'is_verified' | 'verified_by' | 'verified_at' | 'is_deleted'>
+  record: Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'is_verified' | 'verified_by' | 'verified_at' | 'is_deleted' | 'serial_number' | 'serial_month' | 'serial_year'>
 ): Promise<ChildVaccinationRecord> {
   const supabase = await createServerSupabase()
   const { data, error } = await supabase

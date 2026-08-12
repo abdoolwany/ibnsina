@@ -88,6 +88,16 @@ const styles = StyleSheet.create({
   },
   detailTitle: { fontSize: 18, fontWeight: 700, textAlign: 'center', marginBottom: 4 },
   detailSubtitle: { fontSize: 10, textAlign: 'center', color: '#444', marginBottom: 18 },
+  serialBox: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  serialColumn: { alignItems: 'center', flexDirection: 'column' },
+  serialNum: { fontSize: 22, fontWeight: 700 },
+  serialLine: { width: 70, borderTopWidth: 1, borderTopColor: '#000', marginVertical: 2 },
+  serialDen: { fontSize: 11 },
   section: { marginBottom: 14 },
   sectionTitle: {
     fontSize: 12,
@@ -153,6 +163,10 @@ function PdfTable<T>({ columns, rows }: { columns: PdfColumn<T>[]; rows: T[] }) 
 export interface ChildReportRow {
   hospital_name?: string
   child_full_name: string
+  serial_number?: number | null
+  serial_month?: number | null
+  serial_year?: number | null
+  serial_display?: string
   birth_date: string
   child_gender: string
   child_nationality: string
@@ -184,6 +198,7 @@ export function ChildrenReportPdf({ rows, isMinistry, dateRange, hospitalName, t
   const columns: PdfColumn<ChildReportRow>[] = []
   if (isMinistry) columns.push({ header: 'المستشفى', flex: 1.6, render: (r) => r.hospital_name || '-' })
   columns.push(
+    { header: 'الرقم المسلسل', flex: 1, render: (r) => (r.serial_number && r.serial_month && r.serial_year ? `${r.serial_number} / ${r.serial_month}-${r.serial_year}` : '-') },
     { header: 'اسم الطفل', flex: 1.4, render: (r) => r.child_full_name },
     { header: 'تاريخ الميلاد', flex: 1, render: (r) => r.birth_date },
     { header: 'اسم الأب', flex: 1.4, render: (r) => r.father_name },
@@ -260,6 +275,9 @@ export interface ChildDetailPdfProps {
     isMinistry?: boolean
     ministry_registered?: boolean
     ministry_registered_at?: string | null
+    serial_number?: number | null
+    serial_month?: number | null
+    serial_year?: number | null
   }
 }
 
@@ -275,6 +293,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
   const fatherName = `${record.father_first_name} ${record.father_grandfather_name}`.trim()
   const motherName = `${record.mother_first_name} ${record.mother_grandfather_name}`.trim()
+  const hasSerial = record.serial_number && record.serial_month && record.serial_year
 
   return (
     <Document>
@@ -283,6 +302,17 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
         <Text style={styles.detailSubtitle}>
           {record.hospital_name ? `المستشفى: ${record.hospital_name}` : ''}
         </Text>
+
+        {/* الرقم المسلسل الشهري بالشكل الرياضي: بسط فوق خط ومقامه الشهر-السنة */}
+        {hasSerial && (
+          <View style={styles.serialBox}>
+            <View style={styles.serialColumn}>
+              <Text style={styles.serialNum}>{record.serial_number}</Text>
+              <View style={styles.serialLine} />
+              <Text style={styles.serialDen}>{record.serial_month}-{record.serial_year}</Text>
+            </View>
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>بيانات الطفل</Text>

@@ -6,6 +6,9 @@ export interface PendingUnverifyRequest {
   record_id: string
   child_full_name: string
   vaccination_date: string
+  serial_number: number | null
+  serial_month: number | null
+  serial_year: number | null
   hospital_name?: string
   requester_name?: string
   requested_at: string
@@ -23,7 +26,7 @@ export async function getPendingUnverifyRequestsByHospitals(hospitalIds: string[
       record_id,
       requested_at,
       hospitals(name),
-      child_vaccination_records(child_full_name, vaccination_date),
+      child_vaccination_records(child_full_name, vaccination_date, serial_number, serial_month, serial_year),
       user_profiles!unverify_requests_requested_by_fkey(full_name)
     `)
     .in('hospital_id', hospitalIds)
@@ -43,7 +46,7 @@ export async function getAllPendingUnverifyRequests(): Promise<PendingUnverifyRe
       record_id,
       requested_at,
       hospitals(name),
-      child_vaccination_records(child_full_name, vaccination_date),
+      child_vaccination_records(child_full_name, vaccination_date, serial_number, serial_month, serial_year),
       user_profiles!unverify_requests_requested_by_fkey(full_name)
     `)
     .eq('status', 'pending')
@@ -55,7 +58,13 @@ export async function getAllPendingUnverifyRequests(): Promise<PendingUnverifyRe
 function mapRequests(data: unknown): PendingUnverifyRequest[] {
   const rows = (data ?? []) as Array<Record<string, unknown> & {
     hospitals: { name: string } | null
-    child_vaccination_records: { child_full_name: string; vaccination_date: string } | null
+    child_vaccination_records: {
+      child_full_name: string
+      vaccination_date: string
+      serial_number: number | null
+      serial_month: number | null
+      serial_year: number | null
+    } | null
     user_profiles: { full_name: string } | null
   }>
   return rows.map(r => ({
@@ -64,6 +73,9 @@ function mapRequests(data: unknown): PendingUnverifyRequest[] {
     requested_at: String(r.requested_at),
     child_full_name: r.child_vaccination_records?.child_full_name ?? '-',
     vaccination_date: r.child_vaccination_records?.vaccination_date ?? '-',
+    serial_number: r.child_vaccination_records?.serial_number ?? null,
+    serial_month: r.child_vaccination_records?.serial_month ?? null,
+    serial_year: r.child_vaccination_records?.serial_year ?? null,
     hospital_name: r.hospitals?.name,
     requester_name: r.user_profiles?.full_name,
   }))

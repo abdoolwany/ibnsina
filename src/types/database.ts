@@ -79,6 +79,10 @@ export interface ChildVaccinationRecord {
   ministry_registered: boolean
   ministry_registered_by: string | null
   ministry_registered_at: string | null
+  // الرقم المسلسل الشهري (يولَّد في قاعدة البيانات لحظة التسجيل — مواصفة الرقم المسلسل)
+  serial_number: number | null
+  serial_month: number | null
+  serial_year: number | null
   created_at: string
   updated_at: string
   is_deleted: boolean
@@ -178,8 +182,8 @@ export interface Database {
       }
       child_vaccination_records: {
         Row: ChildVaccinationRecord
-        Insert: Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at'>>
+        Insert: Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'serial_number' | 'serial_month' | 'serial_year'>
+        Update: Partial<Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'serial_number' | 'serial_month' | 'serial_year'>>
       }
       audit_log: {
         Row: AuditLog

@@ -8,6 +8,7 @@ import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { formatCairoDateTime, cairoToday } from "@/lib/time"
 import { createClient } from "@/lib/supabase/client"
 import { resolveUnverifyRequest } from "@/lib/client/unverifyRequests"
+import ChildSerial from "@/components/ChildSerial"
 
 // بيانات السجل مع الروابط الداخلية القادمة من الخادم
 interface ChildRecordViewData {
@@ -32,6 +33,9 @@ interface ChildRecordViewData {
   verified_at: string | null
   ministry_registered: boolean
   ministry_registered_at: string | null
+  serial_number: number | null
+  serial_month: number | null
+  serial_year: number | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
   hospitals: { name: string } | null
@@ -132,6 +136,9 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
             isMinistry,
             ministry_registered: record.ministry_registered,
             ministry_registered_at: record.ministry_registered_at,
+            serial_number: record.serial_number,
+            serial_month: record.serial_month,
+            serial_year: record.serial_year,
           }}
         />,
         `سجل-${record.child_full_name}-${cairoToday()}.pdf`
@@ -238,6 +245,19 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
       {error && (
         <div className="bg-red-50 p-3 text-sm text-red-700 rounded-lg">{error}</div>
       )}
+
+      {/* الرقم المسلسل الشهري — يظهر مع كل تقرير أو اشعار يخص الطفل ويُطبع معه (مواصفة الرقم المسلسل) */}
+      <div className="card p-4 flex items-center justify-center gap-4">
+        <div>
+          <div className="text-xs text-gray-500 mb-1">الرقم المسلسل (شهري)</div>
+          <ChildSerial
+            serialNumber={record.serial_number}
+            serialMonth={record.serial_month}
+            serialYear={record.serial_year}
+            size="lg"
+          />
+        </div>
+      </div>
 
       {/* شريط الإجراءات — زر تنزيل PDF متاح لكل الأدوار (قراءة فقط)،
           أما أزرار التعديل/الحذف/التوثيق فحسب صلاحية ومستوى المستخدم (بند 5) */}

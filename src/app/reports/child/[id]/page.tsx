@@ -32,6 +32,9 @@ interface ChildRecordData {
   verified_at: string | null
   ministry_registered: boolean
   ministry_registered_at: string | null
+  serial_number: number | null
+  serial_month: number | null
+  serial_year: number | null
   vaccinators: { full_name: string } | null
   vaccine_batches: { delivery_date: string; batch_number: string; expiry_date: string } | null
   hospitals: { name: string } | null

@@ -28,6 +28,9 @@ type ReportRow = {
   is_verified: boolean
   verified_at: string | null
   created_at: string
+  serial_number: number | null
+  serial_month: number | null
+  serial_year: number | null
   hospital_name: string | null
   vaccinator_name: string | null
   entered_by_name: string | null
@@ -236,6 +239,9 @@ export async function GET(request: Request) {
     is_verified: r.is_verified,
     verified_at: r.verified_at,
     created_at: r.created_at,
+    serial_number: r.serial_number,
+    serial_month: r.serial_month,
+    serial_year: r.serial_year,
     ministry_registered: r.ministry_registered,
     ministry_registered_at: r.ministry_registered_at,
     request_status: r.request_status,

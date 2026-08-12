@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { PendingUnverifyRequest } from "@/lib/db/unverifyRequests"
 import { resolveUnverifyRequest } from "@/lib/client/unverifyRequests"
+import ChildSerial from "@/components/ChildSerial"
 
 interface Props {
   requests: PendingUnverifyRequest[]
@@ -56,6 +57,7 @@ export default function UnverifyRequestsList({ requests, showHospital = true }: 
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-gray-50 border-b text-right">
+                <th className="py-3 px-4 font-semibold">الرقم المسلسل</th>
                 <th className="py-3 px-4 font-semibold">الطفل</th>
                 <th className="py-3 px-4 font-semibold">تاريخ التطعيم</th>
                 {showHospital && <th className="py-3 px-4 font-semibold">المستشفى</th>}
@@ -72,6 +74,14 @@ export default function UnverifyRequestsList({ requests, showHospital = true }: 
                   className="row-clickable border-b hover:bg-gray-50"
                   onClick={() => window.open(`/reports/child/${r.record_id}`, '_blank', 'noopener,noreferrer')}
                 >
+                  <td className="py-3 px-4">
+                    <ChildSerial
+                      serialNumber={r.serial_number}
+                      serialMonth={r.serial_month}
+                      serialYear={r.serial_year}
+                      size="sm"
+                    />
+                  </td>
                   <td className="py-3 px-4">{r.child_full_name}</td>
                   <td className="py-3 px-4">{r.vaccination_date}</td>
                   {showHospital && <td className="py-3 px-4">{r.hospital_name ?? '-'}</td>}
