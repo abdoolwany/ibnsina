@@ -21,14 +21,15 @@ export default async function MohAdminPage() {
       return { ...h, totalDelivered, remaining, childrenCount: children.length, verifiedCount: verified }
     })
   )
+  // إجمالي الطعوم المتوفرة الآن = مجموع الرصيد اللحظي المتبقي في كل المستشفيات
+  // (الكمية المستلمة ناقص الاستخدام عبر الوقت لكل دفعة — من batch_balance_view)
   const totals = hospitalData.reduce(
     (s, h) => ({
       children: s.children + h.childrenCount,
-      delivered: s.delivered + h.totalDelivered,
       verified: s.verified + h.verifiedCount,
       remaining: s.remaining + h.remaining,
     }),
-    { children: 0, delivered: 0, verified: 0, remaining: 0 }
+    { children: 0, verified: 0, remaining: 0 }
   )
 
   return (
@@ -45,8 +46,8 @@ export default async function MohAdminPage() {
             <div className="text-sm text-gray-600">عدد المستشفيات</div>
           </div>
           <div className="card p-4">
-            <div className="text-2xl font-bold text-green-600">{totals.delivered}</div>
-            <div className="text-sm text-gray-600">إجمالي اللقاحات المسلمة</div>
+            <div className="text-2xl font-bold text-green-600">{totals.remaining}</div>
+            <div className="text-sm text-gray-600">إجمالي الطعوم المتوفرة الآن في المستشفيات</div>
           </div>
           <div className="card p-4">
             <div className="text-2xl font-bold text-indigo-600">{totals.children}</div>
