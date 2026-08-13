@@ -15,6 +15,6 @@ jobs:
         run: |
           curl -sS -X GET \
             -H "x-cron-secret: $CRON_SECRET" \
-            "https://ibnsina.vercel.app/api/system/auto-cleanup" \
+            "https://hepb-track.vercel.app/api/system/auto-cleanup" \
             -o /tmp/response.json -w "HTTP %{http_code}\n" || true
           cat /tmp/response.json 2>/dev/null || true
