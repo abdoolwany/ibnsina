@@ -119,6 +119,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
   const [dateType, setDateType] = useState<'birth_date' | 'created_at'>('birth_date')
   const [hospitalId, setHospitalId] = useState("")
   const [childName, setChildName] = useState("")
+  const [serialNumber, setSerialNumber] = useState("")
   const [fatherName, setFatherName] = useState("")
   const [fatherGrandfather, setFatherGrandfather] = useState("")
   const [fatherNationalId, setFatherNationalId] = useState("")
@@ -189,6 +190,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
     if (hospitalId) p.set('hospital_id', hospitalId)
     p.set('date_type', dateType)
     if (childName.trim()) p.set('child_name', childName.trim())
+    if (serialNumber.trim()) p.set('serial_number', serialNumber.trim())
     if (fatherName.trim()) p.set('father_name', fatherName.trim())
     if (fatherGrandfather.trim()) p.set('father_grandfather', fatherGrandfather.trim())
     if (fatherNationalId.trim()) p.set('father_national_id', fatherNationalId.trim())
@@ -258,6 +260,13 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
       return
     }
 
+    // الرقم المسلسل ليس فريدًا بين المستشفيات، لذا يلزم تحديد مستشفى
+    // لحسابات الوزارة (المستوى الأول والإدارة العليا) عند البحث به
+    if (serialNumber.trim() && isMinistry && !hospitalId) {
+      setError("يجب تحديد المستشفى من فلتر المستشفى عند البحث بالرقم المسلسل")
+      return
+    }
+
     setHasSearched(true)
     runFetch({ page: 1 })
   }
@@ -294,6 +303,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
     setDateTo("")
     setHospitalId("")
     setChildName("")
+    setSerialNumber("")
     setFatherName("")
     setFatherGrandfather("")
     setFatherNationalId("")
@@ -545,6 +555,12 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                   className="input-field" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700">الرقم المسلسل (شهري)</label>
+                <input type="number" min="1" step="1" value={serialNumber} onChange={e => setSerialNumber(e.target.value)}
+                  disabled={filtersDisabled}
+                  className="input-field disabled:bg-gray-100 disabled:cursor-not-allowed" placeholder="مثال: 352" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700">الجنسية</label>
                 <select value={nationalityFilter} onChange={e => setNationalityFilter(e.target.value)}
                   className="input-field">
@@ -622,7 +638,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
             <h4 className="text-sm font-semibold text-gray-500 mb-2 mt-4">التطعيم</h4>
             {filtersDisabled && (
               <p className="text-xs text-red-600 mb-2">
-                فلتر «رقم التشغيلة (Lot)» وفلترا «القائم بالتطعيم» و«المدخل» يعملون فقط عند تحديد مستشفى معيّن من فلتر المستشفى أعلاه
+                فلتر «الرقم المسلسل» و«رقم التشغيلة (Lot)» وفلترا «القائم بالتطعيم» و«المدخل» يعملون فقط عند تحديد مستشفى معيّن من فلتر المستشفى أعلاه
               </p>
             )}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -724,6 +740,15 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* رسالة عدم وجود نتائج — خاصة بالرقم المسلسل عندما أُدخل للبحث */}
+      {hasSearched && stats && stats.total === 0 && (
+        <div className="text-center text-gray-500 py-8">
+          {serialNumber.trim()
+            ? `لا يوجد سجل بالرقم المسلسل «${serialNumber.trim()}» ضمن الفترة المحددة`
+            : 'لا توجد سجلات ضمن النطاق المحدد'}
         </div>
       )}
 

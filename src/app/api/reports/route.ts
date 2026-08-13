@@ -62,6 +62,7 @@ export async function GET(request: Request) {
   const dateFrom = searchParams.get('date_from')
   const dateTo = searchParams.get('date_to')
   const hospitalId = searchParams.get('hospital_id')
+  const serialParam = searchParams.get('serial_number')
   // نوع الفلترة الزمنية: birth_date (تاريخ ميلاد الطفل - الافتراضي) أو created_at (تاريخ الإدخال الفعلي)
   const dateType = searchParams.get('date_type') === 'created_at' ? 'created_at' : 'birth_date'
 
@@ -77,6 +78,23 @@ export async function GET(request: Request) {
   if (!dateFrom || !dateTo) {
     return NextResponse.json({
       error: 'يجب تحديد تاريخ البداية والنهاية للبحث',
+    }, { status: 400 })
+  }
+
+  // الرقم المسلسل ليس فريدًا بين المستشفيات، لذا يلزم تحديد مستشفى لحسابات
+  // الوزارة (المستوى الأول والإدارة العليا) عند البحث به — يُفرض على الخادم أيضًا
+  // وليس في الواجهة فقط (القسم 2 من المواصفات: حماية على مستوى الخادم).
+  const rawSerial = serialParam?.trim() ?? ''
+  const isValidSerial = rawSerial !== '' && /^[1-9]\d*$/.test(rawSerial)
+  const parsedSerial = isValidSerial ? Number(rawSerial) : null
+  if (rawSerial !== '' && !isValidSerial) {
+    return NextResponse.json({
+      error: 'الرقم المسلسل يجب أن يكون رقمًا صحيحًا موجبًا',
+    }, { status: 400 })
+  }
+  if (isValidSerial && (role === 'moh_admin' || role === 'moh_level1') && !hospitalId) {
+    return NextResponse.json({
+      error: 'يجب تحديد المستشفى عند البحث بالرقم المسلسل',
     }, { status: 400 })
   }
 
@@ -112,6 +130,7 @@ export async function GET(request: Request) {
     p_father_phone: searchParams.get('father_phone'),
     p_mother_phone: searchParams.get('mother_phone'),
     p_batch_number: searchParams.get('batch_number'),
+    p_serial_number: parsedSerial?.toString() ?? null,
   }
 
   // نطاق التاريخ: birth_date مقارنة مباشرة، أما created_at فيُحوَّل لحدود منتصف ليل توقيت القاهرة
@@ -279,6 +298,7 @@ export async function GET(request: Request) {
         father_phone: searchParams.get('father_phone'),
         mother_phone: searchParams.get('mother_phone'),
         batch_number: searchParams.get('batch_number'),
+        serial_number: serialParam,
         status: statusFilter,
         ministry_status: ministryStatus,
       },
