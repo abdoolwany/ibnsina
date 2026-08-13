@@ -29,6 +29,7 @@ interface ChildRecordData {
   vaccination_date: string
   is_verified: boolean
   created_at: string
+  recorded_at: string
   verified_at: string | null
   ministry_registered: boolean
   ministry_registered_at: string | null

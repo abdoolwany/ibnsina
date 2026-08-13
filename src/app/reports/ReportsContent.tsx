@@ -39,6 +39,7 @@ interface ChildRecord {
   is_verified: boolean
   verified_at: string | null
   created_at: string
+  recorded_at: string
   ministry_registered: boolean
   ministry_registered_at: string | null
   serial_number: number | null
@@ -364,7 +365,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
         serial_year: r.serial_year,
         serial_display: hasSerial ? `${r.serial_number} / ${r.serial_month}-${r.serial_year}` : '',
         birth_date: r.birth_date,
-        registration_date: formatCairoDate(r.created_at),
+        registration_date: formatCairoDate(r.recorded_at),
         child_gender: r.child_gender,
         child_nationality: r.child_nationality,
         father_name: formatFullName(r.father_first_name, r.father_grandfather_name),
@@ -818,7 +819,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                     </td>
                     <td className="font-medium">{r.child_full_name}</td>
                     <td>{r.birth_date}</td>
-                    <td>{formatCairoDate(r.created_at)}</td>
+                    <td>{formatCairoDate(r.recorded_at)}</td>
                     <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
                     <td>{r.father_national_id}</td>
                     <td>{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>
@@ -885,7 +886,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                       </td>
                       <td>{r.child_full_name}</td>
                       <td>{r.birth_date}</td>
-                      <td>{formatCairoDate(r.created_at)}</td>
+                      <td>{formatCairoDate(r.recorded_at)}</td>
                       <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
                       <td>{r.father_national_id}</td>
                       <td>{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>

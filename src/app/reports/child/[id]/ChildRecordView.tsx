@@ -30,6 +30,7 @@ interface ChildRecordViewData {
   vaccination_date: string
   is_verified: boolean
   created_at: string
+  recorded_at: string
   verified_at: string | null
   ministry_registered: boolean
   ministry_registered_at: string | null
@@ -132,6 +133,7 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
             is_verified: record.is_verified,
             hospital_name: record.hospitals?.name,
             created_at: record.created_at,
+            recorded_at: record.recorded_at,
             verified_at: record.verified_at,
             isMinistry,
             ministry_registered: record.ministry_registered,
@@ -330,7 +332,7 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
             <Row label="اسم الطفل" value={record.child_full_name} />
             <Row label="النوع" value={record.child_gender === 'male' ? 'ذكر' : 'أنثى'} />
             <Row label="تاريخ الميلاد" value={record.birth_date} />
-            <Row label="تاريخ القيد" value={formatCairoDate(record.created_at)} />
+            <Row label="تاريخ القيد" value={formatCairoDate(record.recorded_at)} />
             <Row label="الجنسية" value={record.child_nationality} />
           </Section>
           <Section title="بيانات التطعيم">

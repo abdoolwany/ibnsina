@@ -273,6 +273,7 @@ export interface ChildDetailPdfProps {
     is_verified?: boolean
     hospital_name?: string
     created_at?: string | null
+    recorded_at?: string | null
     verified_at?: string | null
     isMinistry?: boolean
     ministry_registered?: boolean
@@ -321,7 +322,7 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
           <DetailRow label="اسم الطفل" value={record.child_full_name} />
           <DetailRow label="النوع" value={record.child_gender === 'male' ? 'ذكر' : 'أنثى'} />
           <DetailRow label="تاريخ الميلاد" value={record.birth_date} />
-          <DetailRow label="تاريخ القيد" value={formatCairoDate(record.created_at)} />
+          <DetailRow label="تاريخ القيد" value={formatCairoDate(record.recorded_at)} />
           <DetailRow label="الجنسية" value={record.child_nationality} />
         </View>
 

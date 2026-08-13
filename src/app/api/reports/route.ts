@@ -28,6 +28,7 @@ type ReportRow = {
   is_verified: boolean
   verified_at: string | null
   created_at: string
+  recorded_at: string
   serial_number: number | null
   serial_month: number | null
   serial_year: number | null
@@ -181,7 +182,7 @@ export async function GET(request: Request) {
     switch (sortBy) {
       case 'birth_date': av = a.birth_date; bv = b.birth_date; break
       case 'vaccination_date': av = a.vaccination_date; bv = b.vaccination_date; break
-      case 'created_at': av = a.created_at; bv = b.created_at; break
+      case 'created_at': av = a.recorded_at; bv = b.recorded_at; break
       case 'hospital': av = a.hospital_name ?? ''; bv = b.hospital_name ?? ''; break
       case 'father_name': av = `${a.father_first_name} ${a.father_grandfather_name}`; bv = `${b.father_first_name} ${b.father_grandfather_name}`; break
       case 'mother_name': av = `${a.mother_first_name} ${a.mother_grandfather_name}`; bv = `${b.mother_first_name} ${b.mother_grandfather_name}`; break
@@ -258,6 +259,7 @@ export async function GET(request: Request) {
     is_verified: r.is_verified,
     verified_at: r.verified_at,
     created_at: r.created_at,
+    recorded_at: r.recorded_at,
     serial_number: r.serial_number,
     serial_month: r.serial_month,
     serial_year: r.serial_year,
