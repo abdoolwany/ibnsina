@@ -9,7 +9,7 @@ import {
   downloadPdf,
   type ChildReportRow,
 } from "@/lib/reports/pdfDocuments"
-import { cairoToday } from "@/lib/time"
+import { cairoToday, formatCairoDate } from "@/lib/time"
 import { MAX_REPORT_RANGE_DAYS, dateRangeDays } from "@/lib/time"
 import { NATIONALITIES, nationalityToFilterParam } from "@/lib/nationalities"
 import ChildSerial from "@/components/ChildSerial"
@@ -364,6 +364,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
         serial_year: r.serial_year,
         serial_display: hasSerial ? `${r.serial_number} / ${r.serial_month}-${r.serial_year}` : '',
         birth_date: r.birth_date,
+        registration_date: formatCairoDate(r.created_at),
         child_gender: r.child_gender,
         child_nationality: r.child_nationality,
         father_name: formatFullName(r.father_first_name, r.father_grandfather_name),
@@ -387,6 +388,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
     { header: 'الرقم المسلسل', key: 'serial_display', width: 14 },
     { header: 'اسم الطفل', key: 'child_full_name', width: 20 },
     { header: 'تاريخ الميلاد', key: 'birth_date', width: 14 },
+    { header: 'تاريخ القيد', key: 'registration_date', width: 14 },
     { header: 'اسم الأب', key: 'father_name', width: 20 },
     { header: 'رقم الأب القومي', key: 'father_national_id', width: 18 },
     { header: 'اسم الأم', key: 'mother_name', width: 20 },
@@ -788,6 +790,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                   <th>الرقم المسلسل</th>
                   <SortableTh label="اسم الطفل" sortKey="child_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="تاريخ الميلاد" sortKey="birth_date" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="تاريخ القيد" sortKey="created_at" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   <SortableTh label="اسم الأب" sortKey="father_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
                   <th>رقم الأب القومي</th>
                   <SortableTh label="اسم الأم" sortKey="mother_name" sortBy={sortBy} sortDir={sortDir} onSort={handleSort} />
@@ -815,6 +818,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                     </td>
                     <td className="font-medium">{r.child_full_name}</td>
                     <td>{r.birth_date}</td>
+                    <td>{formatCairoDate(r.created_at)}</td>
                     <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
                     <td>{r.father_national_id}</td>
                     <td>{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>
@@ -853,6 +857,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                     <th>الرقم المسلسل</th>
                     <th>اسم الطفل</th>
                     <th>تاريخ الميلاد</th>
+                    <th>تاريخ القيد</th>
                     <th>اسم الأب</th>
                     <th>رقم الأب القومي</th>
                     <th>اسم الأم</th>
@@ -880,6 +885,7 @@ export default function ReportsContent({ hospitals, userRole, vaccinators, entry
                       </td>
                       <td>{r.child_full_name}</td>
                       <td>{r.birth_date}</td>
+                      <td>{formatCairoDate(r.created_at)}</td>
                       <td>{formatFullName(r.father_first_name, r.father_grandfather_name)}</td>
                       <td>{r.father_national_id}</td>
                       <td>{formatFullName(r.mother_first_name, r.mother_grandfather_name)}</td>

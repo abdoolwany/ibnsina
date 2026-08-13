@@ -73,6 +73,13 @@ export function formatCairoDateTime(iso: string | null | undefined): string {
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`
 }
 
+/** عرض تاريخ فقط (مخزَّن UTC) بصيغة YYYY-MM-DD بتوقيت القاهرة — لعمود "تاريخ القيد" */
+export function formatCairoDate(iso: string | null | undefined): string {
+  if (!iso) return '-'
+  const p = cairoParts(new Date(iso))
+  return `${p.year}-${p.month}-${p.day}`
+}
+
 // الحد الأقصى لمدة البحث في التقارير (القسم 9): شهر واحد، ويُفسَّر بـ 31 يومًا
 // لاستيعاب الشهور التي تتجاوز 30 يومًا (مثال: 1 يناير → 31 يناير أو 1 فبراير)
 export const MAX_REPORT_RANGE_DAYS = 31

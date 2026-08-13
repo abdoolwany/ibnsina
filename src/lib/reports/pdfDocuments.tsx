@@ -11,7 +11,7 @@ import {
   Font,
   pdf,
 } from '@react-pdf/renderer'
-import { formatCairoDateTime } from '@/lib/time'
+import { formatCairoDateTime, formatCairoDate } from '@/lib/time'
 
 // خط عربي نظيف (Tajawal) — ملفاته من /public ليُحملها المتصفح وقت التصدير
 // (استُبدل بـ Amiri لخط أوضح وأكثر ملاءمة للمطبوعات)
@@ -168,6 +168,7 @@ export interface ChildReportRow {
   serial_year?: number | null
   serial_display?: string
   birth_date: string
+  registration_date?: string
   child_gender: string
   child_nationality: string
   father_name: string
@@ -196,23 +197,24 @@ interface ChildrenReportPdfProps {
 
 export function ChildrenReportPdf({ rows, isMinistry, dateRange, hospitalName, total, male, female }: ChildrenReportPdfProps) {
   const columns: PdfColumn<ChildReportRow>[] = []
-  if (isMinistry) columns.push({ header: 'المستشفى', flex: 1.6, render: (r) => r.hospital_name || '-' })
+  if (isMinistry) columns.push({ header: 'المستشفى', flex: 1.4, render: (r) => r.hospital_name || '-' })
   columns.push(
     { header: 'الرقم المسلسل', flex: 1, render: (r) => (r.serial_number && r.serial_month && r.serial_year ? `${r.serial_number} / ${r.serial_month}-${r.serial_year}` : '-') },
-    { header: 'اسم الطفل', flex: 1.4, render: (r) => r.child_full_name },
-    { header: 'تاريخ الميلاد', flex: 1, render: (r) => r.birth_date },
-    { header: 'اسم الأب', flex: 1.4, render: (r) => r.father_name },
-    { header: 'رقم الأب القومي', flex: 1.4, render: (r) => r.father_national_id },
-    { header: 'اسم الأم', flex: 1.4, render: (r) => r.mother_name },
-    { header: 'رقم الأم القومي', flex: 1.4, render: (r) => r.mother_national_id || '-' },
-    { header: 'تاريخ التطعيم', flex: 1, render: (r) => r.vaccination_date },
-    { header: 'القائم بالتطعيم', flex: 1.3, render: (r) => r.vaccinator_name },
-    { header: 'المدخل', flex: 1.3, render: (r) => r.entered_by_name || '-' },
-    { header: 'رقم التشغيلة', flex: 1.2, render: (r) => r.batch_number },
-    { header: 'تاريخ دخول الطلبية', flex: 1, render: (r) => r.batch_delivery_date || '-' },
-    { header: 'الحالة', flex: 1, render: (r) => (r.is_verified ? 'موثّق' : 'غير موثّق') },
+    { header: 'اسم الطفل', flex: 1.2, render: (r) => r.child_full_name },
+    { header: 'تاريخ الميلاد', flex: 0.9, render: (r) => r.birth_date },
+    { header: 'تاريخ القيد', flex: 0.9, render: (r) => r.registration_date || '-' },
+    { header: 'اسم الأب', flex: 1.2, render: (r) => r.father_name },
+    { header: 'رقم الأب القومي', flex: 1.2, render: (r) => r.father_national_id },
+    { header: 'اسم الأم', flex: 1.2, render: (r) => r.mother_name },
+    { header: 'رقم الأم القومي', flex: 1.2, render: (r) => r.mother_national_id || '-' },
+    { header: 'تاريخ التطعيم', flex: 0.9, render: (r) => r.vaccination_date },
+    { header: 'القائم بالتطعيم', flex: 1.2, render: (r) => r.vaccinator_name },
+    { header: 'المدخل', flex: 1.2, render: (r) => r.entered_by_name || '-' },
+    { header: 'رقم التشغيلة', flex: 1, render: (r) => r.batch_number },
+    { header: 'تاريخ دخول الطلبية', flex: 0.9, render: (r) => r.batch_delivery_date || '-' },
+    { header: 'الحالة', flex: 0.9, render: (r) => (r.is_verified ? 'موثّق' : 'غير موثّق') },
   )
-  if (isMinistry) columns.push({ header: 'الميكنة', flex: 1.1, render: (r) => r.ministry_registered ? 'مسجّل' : 'غير مسجّل' })
+  if (isMinistry) columns.push({ header: 'الميكنة', flex: 1, render: (r) => r.ministry_registered ? 'مسجّل' : 'غير مسجّل' })
 
   return (
     <Document>
@@ -319,6 +321,7 @@ export function ChildDetailPdf({ record }: ChildDetailPdfProps) {
           <DetailRow label="اسم الطفل" value={record.child_full_name} />
           <DetailRow label="النوع" value={record.child_gender === 'male' ? 'ذكر' : 'أنثى'} />
           <DetailRow label="تاريخ الميلاد" value={record.birth_date} />
+          <DetailRow label="تاريخ القيد" value={formatCairoDate(record.created_at)} />
           <DetailRow label="الجنسية" value={record.child_nationality} />
         </View>
 

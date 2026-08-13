@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Pencil, Trash2, CheckCircle2, LockOpen, MonitorCheck, XCircle } from "lucide-react"
 import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
-import { formatCairoDateTime, cairoToday } from "@/lib/time"
+import { formatCairoDateTime, cairoToday, formatCairoDate } from "@/lib/time"
 import { createClient } from "@/lib/supabase/client"
 import { resolveUnverifyRequest } from "@/lib/client/unverifyRequests"
 import ChildSerial from "@/components/ChildSerial"
@@ -330,6 +330,7 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
             <Row label="اسم الطفل" value={record.child_full_name} />
             <Row label="النوع" value={record.child_gender === 'male' ? 'ذكر' : 'أنثى'} />
             <Row label="تاريخ الميلاد" value={record.birth_date} />
+            <Row label="تاريخ القيد" value={formatCairoDate(record.created_at)} />
             <Row label="الجنسية" value={record.child_nationality} />
           </Section>
           <Section title="بيانات التطعيم">
