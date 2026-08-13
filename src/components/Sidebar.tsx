@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   LogOut,
   Syringe,
-  Hash,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { AuthUser } from "@/lib/auth"
@@ -47,7 +46,6 @@ function getNavItems(role: string): NavItem[] {
   if (role === 'moh_admin') {
     items.push({ href: '/moh-admin/hospitals', label: 'المستشفيات', icon: Building2, matchExact: true })
     items.push({ href: '/moh-admin/users', label: 'المستخدمون', icon: Users, matchExact: true })
-    items.push({ href: '/moh-admin/serials', label: 'الأرقام المسلسلة', icon: Hash, matchExact: true })
   }
 
   if (role === 'system_operator') {
