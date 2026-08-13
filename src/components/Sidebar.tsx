@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   LogOut,
   Syringe,
+  BarChart3,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { AuthUser } from "@/lib/auth"
@@ -49,6 +50,7 @@ function getNavItems(role: string): NavItem[] {
   }
 
   if (role === 'system_operator') {
+    items.push({ href: '/system-operator/monitor', label: 'مراقبة الموارد', icon: BarChart3, matchExact: true })
     items.push({ href: '/system-operator/users', label: 'المستخدمون', icon: Users, matchExact: true })
   }
 

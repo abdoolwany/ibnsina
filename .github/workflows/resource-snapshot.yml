@@ -1,0 +1,17 @@
+name: Resource Snapshot
+
+# يسجل لقطة يومية لحجم قاعدة البيانات والاستهلاك في شاشة مراقبة الموارد
+# تُستخدم اللقطات لحساب معدل النمو وتوقع تاريخ نفاد الحد التراكمي
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record resource snapshot
+        run: |
+          curl -s -X POST -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            https://ibnsina.vercel.app/api/system/monitor/snapshot

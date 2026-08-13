@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { TABLE_LABELS } from "@/components/storageLabels"
 
 interface TableStat {
   schemaname: string
@@ -23,52 +24,6 @@ interface Settings {
 }
 
 const FREE_TIER_BYTES = 500 * 1024 * 1024
-
-// أسماء عربية توضيحية لجداول النظام (يُعرض الاسم التقني تحتها دائمًا للمطابقة مع Supabase)
-const TABLE_LABELS: Record<string, string> = {
-  'public.child_vaccination_records': 'سجلات تطعيم الأطفال (الأهم)',
-  'public.deleted_child_vaccination_records': 'أرشيف الجرعات المحذوفة — يمنع عودة الرصيد',
-  'public.vaccine_batches': 'دفعات اللقاح',
-  'public.hospitals': 'المستشفيات',
-  'public.vaccinators': 'القائمون بالتطعيم',
-  'public.user_profiles': 'ملفات المستخدمين (الأدوار)',
-  'public.user_hospital_links': 'ربط المستخدمين بالمستشفيات',
-  'public.audit_log': 'سجل التدقيق — كل العمليات الحساسة',
-  'public.unverify_requests': 'طلبات إعادة فتح التوثيق',
-  'public.system_settings': 'إعدادات النظام',
-  'public.warehouse_shipments': 'شحنات المخزن (غير مستخدم)',
-  'auth.users': 'حسابات المستخدمين (المصادقة)',
-  'auth.refresh_tokens': 'رموز تجديد الجلسات',
-  'auth.sessions': 'جلسات الدخول النشطة',
-  'auth.identities': 'هويات تسجيل الدخول',
-  'auth.one_time_tokens': 'رموز الاستخدام الواحد',
-  'auth.mfa_factors': 'عوامل التحقق الثنائي (MFA)',
-  'auth.mfa_amr_claims': 'بيانات التحقق الثنائي (MFA)',
-  'auth.mfa_challenges': 'تحديات التحقق الثنائي (MFA)',
-  'auth.custom_oauth_providers': 'مزودو تسجيل الدخول الاجتماعي',
-  'auth.oauth_clients': 'عملاء OAuth',
-  'auth.oauth_consents': 'موافقات OAuth',
-  'auth.oauth_authorizations': 'تفويضات OAuth',
-  'auth.oauth_client_states': 'حالات عملاء OAuth',
-  'auth.sso_domains': 'نطاقات SSO',
-  'auth.sso_providers': 'مزودو SSO',
-  'auth.saml_providers': 'مزودو SAML',
-  'auth.saml_relay_states': 'حالات SAML الداخلية',
-  'auth.webauthn_credentials': 'بيانات الدخول الحيوي',
-  'auth.webauthn_challenges': 'تحديات الدخول الحيوي',
-  'auth.flow_state': 'حالات تدفقات المصادقة',
-  'auth.instances': 'بيانات داخلية للمصادقة',
-  'auth.schema_migrations': 'سجل ترحيلات المصادقة',
-  'auth.audit_log_entries': 'سجل تدقيق المصادقة',
-  'storage.objects': 'ملفات التخزين (صور الهويات مؤجلًا)',
-  'storage.buckets': 'حاويات التخزين',
-  'storage.migrations': 'سجل ترحيلات نظام التخزين',
-  'storage.vector_indexes': 'فهارس تخزين داخلية',
-  'storage.buckets_analytics': 'تحليلات تخزين داخلية',
-  'storage.buckets_vectors': 'بيانات تخزين داخلية',
-  'storage.s3_multipart_uploads': 'رفع مقسم (S3)',
-  'storage.s3_multipart_uploads_parts': 'أجزاء الرفع المقسم (S3)',
-}
 
 export default function StorageManager() {
   const [storage, setStorage] = useState<StorageData | null>(null)
