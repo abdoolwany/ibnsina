@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSystemPgClient } from '@/lib/db/pool'
+import { archiveBeforeDelete } from '@/lib/db/archive'
 import { cairoDayStartUtc, cairoDayEndExclusiveUtc } from '@/lib/time'
 
 // POST /api/system/delete-records
@@ -55,6 +56,16 @@ export async function POST(request: Request) {
     }
 
     const ids = rows.map((r) => r.id)
+    // ضمانة التسليم قبل الحذف: تُدرج آخر حالة للسجلات المؤهلة في الأرشيف
+    // أولًا، وإن فشلت الأرشفة يُلغى الحذف كاملًا (لا يُحذف سجل بلا نسخة محدثة)
+    try {
+      await archiveBeforeDelete(rows, 'child')
+    } catch (archiveErr) {
+      return NextResponse.json(
+        { error: `تعذرت الأرشفة قبل الحذف — أُلغي الحذف: ${archiveErr instanceof Error ? archiveErr.message : 'خطأ'}` },
+        { status: 500 }
+      )
+    }
     const { error: delErr } = await admin
       .from('child_vaccination_records')
       .delete()
@@ -109,6 +120,15 @@ export async function POST(request: Request) {
     if (childSelErr) return NextResponse.json({ error: childSelErr.message }, { status: 500 })
     if (childRows && childRows.length > 0) {
       const childIds = childRows.map((r) => r.id)
+      // ضمانة التسليم: أرشفة أطفال الدفعة قبل حذفهم
+      try {
+        await archiveBeforeDelete(childRows, 'child')
+      } catch (archiveErr) {
+        return NextResponse.json(
+          { error: `تعذرت الأرشفة قبل الحذف — أُلغي حذف الأطفال: ${archiveErr instanceof Error ? archiveErr.message : 'خطأ'}` },
+          { status: 500 }
+        )
+      }
       const { error: childDelErr } = await admin
         .from('child_vaccination_records')
         .delete()
@@ -128,6 +148,15 @@ export async function POST(request: Request) {
 
   let deletedBatches = 0
   if (batchIds.length > 0) {
+    // ضمانة التسليم: أرشفة الدفعات قبل حذفها
+    try {
+      await archiveBeforeDelete(fullBatchRows ?? [], 'batch')
+    } catch (archiveErr) {
+      return NextResponse.json(
+        { error: `تعذرت الأرشفة قبل حذف الدفعات — أُلغي الحذف: ${archiveErr instanceof Error ? archiveErr.message : 'خطأ'}` },
+        { status: 500 }
+      )
+    }
     const { error: batchDelErr } = await admin
       .from('vaccine_batches')
       .delete()

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createServiceRoleClient } from '@/lib/supabase/server'
 import { getSystemPgClient } from '@/lib/db/pool'
+import { archiveBeforeDelete } from '@/lib/db/archive'
 
 // GET /api/system/auto-cleanup
 // يفحص حجم قاعدة البيانات، وإذا تجاوز حد التخزين المحدد في الإعدادات
@@ -61,6 +62,16 @@ export async function GET(request: Request) {
   const rows = selected ?? []
   if (rows.length > 0) {
     const ids = rows.map((r) => r.id)
+    // ضمانة التسليم قبل الحذف التلقائي: تُدرج آخر حالة في الأرشيف أولًا،
+    // وإن فشلت الأرشفة يُلغى الحذف كاملًا (لا يُحذف سجل بلا نسخة محدثة)
+    try {
+      await archiveBeforeDelete(rows, 'child')
+    } catch (archiveErr) {
+      return NextResponse.json(
+        { error: `تعذرت الأرشفة قبل الحذف — أُلغي الحذف: ${archiveErr instanceof Error ? archiveErr.message : 'خطأ'}` },
+        { status: 500 }
+      )
+    }
     await admin.from('child_vaccination_records').delete().in('id', ids)
     await admin.from('audit_log').insert(
       rows.map((r) => ({

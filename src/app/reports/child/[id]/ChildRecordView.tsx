@@ -8,6 +8,7 @@ import { ChildDetailPdf, downloadPdf } from "@/lib/reports/pdfDocuments"
 import { formatCairoDateTime, cairoToday, formatCairoDate } from "@/lib/time"
 import { createClient } from "@/lib/supabase/client"
 import { resolveUnverifyRequest } from "@/lib/client/unverifyRequests"
+import { protectRecordBeforeDelete } from "@/lib/client/archive"
 import ChildSerial from "@/components/ChildSerial"
 
 // بيانات السجل مع الروابط الداخلية القادمة من الخادم
@@ -170,6 +171,13 @@ export default function ChildRecordView({ record, userRole, userId, hospitalIds,
     if (!window.confirm(`تحذير: سيتم حذف سجل الطفل «${record.child_full_name}» نهائيًا وستُرجَع جرعته إلى رصيد الدفعة. هل أنت متأكد؟`)) return
     setAction('delete')
     setError("")
+    // ضمانة التسليم: أرشفة آخر حالة قبل الحذف الفردي (تُلغى عند الفشل)
+    const { error: protectError } = await protectRecordBeforeDelete(record.id)
+    if (protectError) {
+      setError(protectError)
+      setAction('')
+      return
+    }
     const { error: delError } = await supabase.from('child_vaccination_records').delete().eq('id', record.id)
     if (delError) {
       setError(delError.message)

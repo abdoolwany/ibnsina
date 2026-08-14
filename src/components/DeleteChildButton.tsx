@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase/client"
+import { protectRecordBeforeDelete } from "@/lib/client/archive"
 
 // حذف سجل طفل غير موثق من لوحتي مدخل البيانات والموثق.
 // الحذف فعلي (hard delete) دون أرشفة، فتنجز الجرعة إلى رصيد الدفعة
@@ -27,6 +28,14 @@ export default function DeleteChildButton({
 
     setDeleting(true)
     setError("")
+
+    // ضمانة التسليم: أرشفة آخر حالة قبل الحذف الفردي (تُلغى عند الفشل)
+    const { error: protectError } = await protectRecordBeforeDelete(childId)
+    if (protectError) {
+      setError(protectError)
+      setDeleting(false)
+      return
+    }
 
     const { error: delError } = await supabase
       .from('child_vaccination_records')

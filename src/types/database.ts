@@ -37,6 +37,7 @@ export interface VaccineBatch {
   created_by: string
   notes: string | null
   created_at: string
+  archived_at: string | null
 }
 
 export interface Vaccinator {
@@ -86,6 +87,7 @@ export interface ChildVaccinationRecord {
   created_at: string
   updated_at: string
   is_deleted: boolean
+  archived_at: string | null
 }
 
 export type UnverifyRequestStatus = 'pending' | 'approved' | 'rejected'
@@ -116,11 +118,28 @@ export interface UnverifyRequestDetail {
   requested_at: string
 }
 
+export type AuditLogAction =
+  | 'insert'
+  | 'update'
+  | 'verify'
+  | 'delete_attempt'
+  | 'unverify'
+  | 'request_create'
+  | 'request_resolve'
+  | 'ministry_register'
+  | 'ministry_unregister'
+  | 'archive'
+  | 'archive_rotate'
+  | 'archive_delete'
+  | 'archive_restore'
+  | 'archive_review_edit'
+  | 'archive_review_close'
+
 export interface AuditLog {
   id: string
   table_name: string
   record_id: string
-  action: 'insert' | 'update' | 'verify' | 'delete_attempt' | 'unverify' | 'request_create' | 'request_resolve' | 'ministry_register' | 'ministry_unregister'
+  action: AuditLogAction
   performed_by: string
   performed_at: string
   old_value: Record<string, unknown> | null
@@ -182,8 +201,8 @@ export interface Database {
       }
       child_vaccination_records: {
         Row: ChildVaccinationRecord
-        Insert: Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'serial_number' | 'serial_month' | 'serial_year'>
-        Update: Partial<Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'serial_number' | 'serial_month' | 'serial_year'>>
+        Insert: Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'serial_number' | 'serial_month' | 'serial_year' | 'archived_at'>
+        Update: Partial<Omit<ChildVaccinationRecord, 'id' | 'created_at' | 'updated_at' | 'serial_number' | 'serial_month' | 'serial_year' | 'archived_at'>>
       }
       audit_log: {
         Row: AuditLog
@@ -199,6 +218,79 @@ export interface Database {
         Row: UnverifyRequest
         Insert: Omit<UnverifyRequest, 'id' | 'requested_at' | 'status'>
         Update: Partial<Omit<UnverifyRequest, 'id'>>
+      }
+      archive_review_sessions: {
+        Row: {
+          id: string
+          month_key: string
+          opened_by: string | null
+          opened_at: string
+          status: 'open' | 'closed'
+          closed_at: string | null
+        }
+        Insert: Partial<{
+          id: string
+          month_key: string
+          opened_by: string | null
+          opened_at: string
+          status: 'open' | 'closed'
+          closed_at: string | null
+        }>
+        Update: Partial<{
+          month_key: string
+          opened_by: string | null
+          opened_at: string
+          status: 'open' | 'closed'
+          closed_at: string | null
+        }>
+      }
+      archive_review_records: {
+        Row: {
+          id: string
+          session_id: string
+          record_id: string
+          kind: 'child' | 'batch'
+          original_data: Record<string, unknown>
+          current_data: Record<string, unknown>
+          updated_by: string | null
+          updated_at: string | null
+        }
+        Insert: Partial<{
+          id: string
+          session_id: string
+          record_id: string
+          kind: 'child' | 'batch'
+          original_data: Record<string, unknown>
+          current_data: Record<string, unknown>
+          updated_by: string | null
+          updated_at: string | null
+        }>
+        Update: Partial<{
+          session_id: string
+          record_id: string
+          kind: 'child' | 'batch'
+          original_data: Record<string, unknown>
+          current_data: Record<string, unknown>
+          updated_by: string | null
+          updated_at: string | null
+        }>
+      }
+      archive_month_files: {
+        Row: {
+          month_key: string
+          content: Record<string, unknown>
+          updated_at: string
+        }
+        Insert: Partial<{
+          month_key: string
+          content: Record<string, unknown>
+          updated_at: string
+        }>
+        Update: Partial<{
+          month_key: string
+          content: Record<string, unknown>
+          updated_at: string
+        }>
       }
     }
     Views: {

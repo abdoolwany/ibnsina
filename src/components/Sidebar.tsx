@@ -14,6 +14,7 @@ import {
   LogOut,
   Syringe,
   BarChart3,
+  Archive,
 } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import type { AuthUser } from "@/lib/auth"
@@ -47,11 +48,13 @@ function getNavItems(role: string): NavItem[] {
   if (role === 'moh_admin') {
     items.push({ href: '/moh-admin/hospitals', label: 'المستشفيات', icon: Building2, matchExact: true })
     items.push({ href: '/moh-admin/users', label: 'المستخدمون', icon: Users, matchExact: true })
+    items.push({ href: '/archives', label: 'الأرشيف الشهري', icon: Archive })
   }
 
   if (role === 'system_operator') {
     items.push({ href: '/system-operator/monitor', label: 'مراقبة الموارد', icon: BarChart3, matchExact: true })
     items.push({ href: '/system-operator/users', label: 'المستخدمون', icon: Users, matchExact: true })
+    items.push({ href: '/archives', label: 'الأرشيف الشهري', icon: Archive })
   }
 
   if (role !== 'system_operator') {

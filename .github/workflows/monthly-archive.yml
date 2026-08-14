@@ -1,0 +1,22 @@
+name: Monthly archive run
+
+on:
+  schedule:
+    - cron: '0 2 1 * *'
+  workflow_dispatch: {}
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger /api/system/archive/run
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl -sS -X POST \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "https://hepb-track.vercel.app/api/system/archive/run" \
+            -o /tmp/response.json -w "HTTP %{http_code}\n" || true
+          cat /tmp/response.json 2>/dev/null || true

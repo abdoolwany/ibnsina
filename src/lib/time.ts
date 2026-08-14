@@ -90,3 +90,41 @@ export function dateRangeDays(dateFrom: string, dateTo: string): number {
   const to = new Date(`${dateTo}T00:00:00Z`).getTime()
   return Math.round((to - from) / 86400000)
 }
+
+/** مكونا السنة والشهر (رقمين) لتوقيت UTC — مستخدمان في الأرشفة الشهرية */
+export function utcYearMonth(iso: string): { year: number; month: number } {
+  const d = new Date(iso)
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 }
+}
+
+/** الشهر (صيغة YYYY-MM) لتوقيت القاهرة — أساس تجميع ملفات الأرشيف الشهرية */
+export function cairoMonthKey(iso: string | Date): string {
+  const p = cairoParts(iso instanceof Date ? iso : new Date(iso))
+  return `${p.year}-${p.month}`
+}
+
+/** إزاحة شهر (سالب للماضي) مع التعامل مع حدود السنوات — للأرشفة الشهرية */
+export function shiftMonth(
+  year: number,
+  month: number,
+  delta: number
+): { year: number; month: number } {
+  const total = year * 12 + (month - 1) + delta
+  return { year: Math.floor(total / 12), month: (total % 12) + 1 }
+}
+
+/** حد الأقدمية الحصري (UTC): أول يوم من الشهر (الحالي − 2) بتوقيت القاهرة.
+ *  الأرشفة تشمل السجلات الأقدم من هذا الحد — أي شهر الحالي − 3 فما قبل. */
+export function archiveCutoffExclusiveUtc(): string {
+  const p = cairoParts(new Date())
+  const boundary = shiftMonth(parseInt(p.year, 10), parseInt(p.month, 10), -2)
+  return cairoDayStartUtc(`${boundary.year}-${String(boundary.month).padStart(2, '0')}-01`)
+}
+
+/** مفتاح شهر حد الأقدمية (YYYY-MM) = الشهر الحالي بتوقيت القاهرة ناقص 3.
+ *  أي سجل شهر created_at ≤ هذا المفتاح يُعتبر مؤهلًا للأرشفة. */
+export function archiveCutoffMonthKey(): string {
+  const p = cairoParts(new Date())
+  const cutoff = shiftMonth(parseInt(p.year, 10), parseInt(p.month, 10), -3)
+  return `${cutoff.year}-${String(cutoff.month).padStart(2, '0')}`
+}
