@@ -135,7 +135,7 @@ export default function ArchiveBrowser({ role }: { role: string }) {
       if (j.status === "in_db") {
         setMessage({
           kind: "info",
-          text: `بيانات شهر ${j.liveCount} سجل ما زالت موجودة في الداتا بيز — لا حاجة لفتح الأرشيف، اطلّع عليها من شاشة التقارير العادية.`,
+          text: `بيانات شهر ${j.liveCount} سجل ما زالت موجودة في النظام — لا حاجة لفتح الأرشيف، اطلّع عليها من شاشة التقارير العادية.`,
         })
       } else if (j.status === "no_file") {
         setMessage({ kind: "info", text: "لا توجد بيانات مؤرشف لهذا الشهر." })
@@ -325,7 +325,7 @@ export default function ArchiveBrowser({ role }: { role: string }) {
                     <td className="py-3 px-4">{formatCairoDate(f.updatedAt)}</td>
                     <td className="py-3 px-4">
                       {f.month_has_live_rows ? (
-                        <span className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">سجلات حية بالداتا بيز</span>
+                        <span className="text-xs text-blue-700 bg-blue-50 px-2 py-1 rounded">سجلات ما زالت في النظام</span>
                       ) : (
                         <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">النسخة الوحيدة</span>
                       )}

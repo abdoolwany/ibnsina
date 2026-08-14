@@ -48,7 +48,6 @@ function getNavItems(role: string): NavItem[] {
   if (role === 'moh_admin') {
     items.push({ href: '/moh-admin/hospitals', label: 'المستشفيات', icon: Building2, matchExact: true })
     items.push({ href: '/moh-admin/users', label: 'المستخدمون', icon: Users, matchExact: true })
-    items.push({ href: '/archives', label: 'الأرشيف الشهري', icon: Archive })
   }
 
   if (role === 'system_operator') {
@@ -61,6 +60,11 @@ function getNavItems(role: string): NavItem[] {
     items.push({ href: '/reports', label: 'التقارير والبحث', icon: FileText, matchExact: true })
     items.push({ href: '/reports/batches', label: 'حركة الطعوم', icon: Activity, matchExact: true })
     items.push({ href: '/reports/vaccinated-count', label: 'عدد المتطعمين', icon: Users, matchExact: true })
+  }
+
+  // الأرشيف الشهري للإدارة العليا يأتي بعد «عدد المتطعمين»
+  if (role === 'moh_admin') {
+    items.push({ href: '/archives', label: 'الأرشيف الشهري', icon: Archive })
   }
 
   if (role === 'moh_level1') {

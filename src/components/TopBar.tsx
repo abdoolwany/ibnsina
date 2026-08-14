@@ -72,8 +72,8 @@ export default function TopBar({
 
         <div className="flex items-center gap-4 min-w-0">
           <span className="flex items-center gap-2 text-[#17D4FE] font-semibold text-sm" dir="ltr">
-            <Clock size={16} />
-            {clock}
+            <Clock size={16} className="shrink-0" />
+            <span className="inline-block w-24 text-left tabular-nums shrink-0">{clock}</span>
           </span>
           <div className="hidden md:block text-left">
             <p className="text-sm font-semibold text-white truncate max-w-[160px]">{user.fullName ?? user.email}</p>
